@@ -47,8 +47,6 @@
         .btn-secondary { background-color: white; color: #475569; border: 1px solid #e2e8f0; padding: 0.75rem 1.75rem; border-radius: 0.875rem; font-weight: 700; transition: all 0.2s; }
         .btn-secondary:hover { background-color: #f8fafc; color: #0f172a; border-color: #cbd5e1; transform: translateY(-1px); }
         
-        .badge-premium { background: #EEF2FF; color: #4F80FF; border: 1px solid #E0E7FF; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
-        
         /* Custom scrollbar for textarea */
         textarea::-webkit-scrollbar { width: 6px; }
         textarea::-webkit-scrollbar-track { background: transparent; }
@@ -73,6 +71,76 @@
         .wizard-option:hover { border-color: #cbd5e1; transform: translateY(-2px); }
         .wizard-option.selected { border-color: #4F80FF; background-color: #F5F7FF; box-shadow: 0 10px 25px -5px rgba(79, 128, 255, 0.15); transform: scale(1.02); }
         .wizard-option.selected::after { content: ''; position: absolute; top: 12px; right: 12px; width: 20px; height: 20px; background: #4F80FF; border-radius: 50%; display: flex; items-center; justify-content: center; color: white; font-size: 10px; content: '✓'; font-weight: bold; }
+        :root { --ink:#15223b; --muted:#637089; --line:#e5e9f0; --surface:#fff; --canvas:#f6f7fb; --primary:#4f5fe7; --primary-dark:#3d49bd; --primary-soft:#eef0ff; --success:#168866; --warning:#b56822; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--canvas); color: var(--ink); letter-spacing: -.01em; }
+        body::before { content:''; position:fixed; inset:0 0 auto; height:380px; z-index:-1; pointer-events:none; background:radial-gradient(circle at 75% -10%,rgba(79,95,231,.10),transparent 42%),radial-gradient(circle at 10% 0%,rgba(83,190,165,.07),transparent 34%); }
+        #app-nav { height:72px; background:rgba(255,255,255,.88); border-color:rgba(226,231,239,.9); }
+        main { padding-top:2.5rem !important; padding-bottom:5rem !important; }
+        .view.active { animation:viewIn .28s ease-out; }
+        @keyframes viewIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        .card,.stat-card,.card-premium { background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:1.25rem; box-shadow:0 1px 2px rgba(20,34,59,.02),0 12px 32px rgba(20,34,59,.045); padding:1.5rem; }
+        .card:hover,.stat-card:hover { transform:none; box-shadow:0 1px 2px rgba(20,34,59,.03),0 16px 38px rgba(20,34,59,.06); }
+        .btn-primary,.btn-gradient { background:var(--primary); border:1px solid var(--primary); color:white; border-radius:.8rem; min-height:44px; padding:.7rem 1.2rem; font-weight:700; box-shadow:0 7px 18px rgba(79,95,231,.18); transition:.18s ease; }
+        .btn-primary:hover,.btn-gradient:hover { background:var(--primary-dark); border-color:var(--primary-dark); transform:translateY(-1px); box-shadow:0 10px 24px rgba(79,95,231,.22); }
+        .btn-primary:disabled,.btn-gradient:disabled { background:#b8bfcd; border-color:#b8bfcd; box-shadow:none; cursor:not-allowed; transform:none; opacity:.75; }
+        .btn-secondary { background:white; border:1px solid var(--line); color:#40506a; border-radius:.8rem; min-height:42px; padding:.65rem 1rem; font-weight:650; box-shadow:0 1px 2px rgba(20,34,59,.03); }
+        .btn-secondary:hover { background:#f9fafc; border-color:#cfd5df; transform:none; }
+        input,textarea,select { border-color:#dfe4ec !important; border-radius:.75rem !important; background:#fff; transition:border-color .15s,box-shadow .15s; }
+        input:focus,textarea:focus,select:focus { border-color:var(--primary) !important; box-shadow:0 0 0 3px rgba(79,95,231,.1) !important; }
+        label { color:#526078; }
+        .input-pill { background:#f8f9fc; border:1px solid var(--line); border-radius:.8rem; }
+        .feature-card { border:1px solid var(--line); border-radius:1rem; padding:1.1rem; box-shadow:none; }
+        .feature-card:hover { transform:none; box-shadow:0 8px 22px rgba(20,34,59,.05); }
+        .wizard-option { border:1px solid var(--line); border-radius:1rem; padding:1.15rem; box-shadow:0 1px 2px rgba(20,34,59,.02); }
+        .wizard-option:hover { border-color:#bbc3d1; transform:translateY(-1px); }
+        .wizard-option.selected { border-color:var(--primary) !important; background:var(--primary-soft); box-shadow:0 0 0 3px rgba(79,95,231,.08); transform:none; }
+        .wizard-option.selected::after { background:var(--primary); }
+        .page-kicker { display:inline-flex; align-items:center; gap:.45rem; color:var(--primary-dark); font-size:.72rem; font-weight:700; letter-spacing:.01em; }
+        .trust-note { display:flex; align-items:flex-start; gap:.75rem; padding:.9rem 1rem; border:1px solid #dce9e5; background:#f4fbf8; border-radius:.9rem; color:#326255; }
+        .section-heading { font-size:1.1rem; line-height:1.35; font-weight:750; color:var(--ink); }
+        .section-copy { color:var(--muted); font-size:.88rem; line-height:1.6; }
+        .score-bar { height:.45rem; background:#edf0f5; border-radius:999px; overflow:hidden; }
+        .score-bar>span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--primary),#7f8af0); }
+        .nav-link { display:inline-flex; align-items:center; gap:.45rem; border-radius:.65rem; padding:.55rem .75rem; color:#647188; font-size:.82rem; font-weight:650; transition:.15s; }
+        .nav-link:hover { color:var(--ink); background:#f5f6fa; }
+        .nav-link.active { color:var(--primary-dark); background:var(--primary-soft); }
+        #auth-view .auth-hero-title { font-size:clamp(2.7rem,6vw,4.75rem); line-height:.98; letter-spacing:-.055em; }
+        #auth-view .auth-card { border:1px solid var(--line); border-radius:1.35rem; box-shadow:0 24px 70px rgba(31,43,71,.09); }
+        #auth-testimonials { display:none; }
+        .interview-status-strip { border:1px solid #dfe3ff; background:#f6f7ff; color:#4551b5; border-radius:.8rem; padding:.7rem .9rem; font-size:.78rem; font-weight:650; }
+        .dashboard-clamp-title,.dashboard-clamp-copy { display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+        .dashboard-clamp-title { -webkit-line-clamp:2; }
+        .dashboard-clamp-copy { -webkit-line-clamp:3; }
+        .dashboard-copy.is-expanded .dashboard-clamp-title,.dashboard-copy.is-expanded .dashboard-clamp-copy { display:block; overflow:visible; }
+        .dashboard-expand { color:var(--primary-dark); font-size:.75rem; font-weight:700; margin-top:.65rem; }
+        .dashboard-expand:hover { text-decoration:underline; }
+        .report-accent { border-left:4px solid transparent; }
+        .report-accent--strength { border-left-color:#22c55e; background:linear-gradient(180deg,rgba(240,253,244,.75),rgba(255,255,255,.98)); }
+        .report-accent--improve { border-left-color:#fb923c; background:linear-gradient(180deg,rgba(255,247,237,.8),rgba(255,255,255,.98)); }
+        .report-accent--practice { border-left-color:#6366f1; background:linear-gradient(180deg,rgba(238,242,255,.8),rgba(255,255,255,.98)); }
+        .report-mini-list { margin-top:.75rem; display:flex; flex-direction:column; gap:.45rem; }
+        .report-mini-list li { display:flex; gap:.5rem; align-items:flex-start; color:#475569; font-size:.92rem; line-height:1.55; }
+        .report-mini-list li::before { content:'•'; color:inherit; font-weight:800; line-height:1.1; }
+        .report-feedback-soft { border-radius:1rem; padding:1rem 1rem .9rem; }
+        .report-feedback-soft--positive { background:#effaf4; border:1px solid #dcf3e4; }
+        .report-feedback-soft--improve { background:#fff7ed; border:1px solid #fde3c8; }
+        .report-answer-toggle { display:flex; align-items:center; justify-content:space-between; gap:.75rem; width:100%; text-align:left; }
+        .report-answer-toggle .report-chevron { transition:transform .18s ease; }
+        details[open] .report-chevron { transform:rotate(180deg); }
+        .report-summary-card { background:linear-gradient(135deg,#172554 0%,#263b86 100%); border:1px solid rgba(255,255,255,.12); box-shadow:0 18px 48px rgba(23,37,84,.16); }
+        .report-score-ring { width:7.25rem; height:7.25rem; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); box-shadow:inset 0 0 0 7px rgba(255,255,255,.035); }
+        .report-question-card { background:#fff; border:1px solid var(--line); border-radius:1.15rem; padding:1.25rem; box-shadow:0 8px 26px rgba(20,34,59,.035); }
+        .report-score-chip { display:inline-flex; align-items:center; justify-content:center; min-width:3.5rem; height:2rem; padding:0 .65rem; border-radius:.65rem; background:var(--primary-soft); color:var(--primary-dark); font-size:.78rem; font-weight:800; }
+        .profile-section-card { background:rgba(255,255,255,.97); border:1px solid var(--line); border-radius:1.15rem; box-shadow:0 8px 28px rgba(20,34,59,.035); overflow:hidden; }
+        .profile-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.25rem 1.35rem; border-bottom:1px solid #edf0f4; }
+        .profile-section-body { padding:1.35rem; }
+        .profile-icon { width:2.25rem; height:2.25rem; display:grid; place-items:center; border-radius:.7rem; background:var(--primary-soft); color:var(--primary-dark); flex:none; }
+        .profile-add-button { display:inline-flex; align-items:center; gap:.4rem; color:var(--primary-dark); font-size:.78rem; font-weight:750; padding:.5rem .65rem; border-radius:.65rem; border:1px solid #dfe3ff; background:#fafaff; transition:.15s; }
+        .profile-add-button:hover { background:var(--primary-soft); border-color:#cfd4ff; }
+        .profile-missing-item { display:inline-flex; align-items:center; gap:.35rem; color:#667085; font-size:.72rem; font-weight:650; }
+        .profile-missing-item::before { content:''; width:.35rem; height:.35rem; border-radius:50%; background:#aab2c0; }
+        @media(max-width:767px){ main{padding:1.25rem 1rem 5rem !important}.card,.stat-card,.card-premium{padding:1.15rem;border-radius:1rem}#auth-view .auth-hero-title{font-size:2.8rem}.nav-link{padding:.55rem}.nav-link span{display:none} }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -90,13 +158,13 @@
                         <p class="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">AI Interview Coach</p>
                     </div>
                 </div>
-                <div class="hidden md:flex items-center gap-2">
-                    <button onclick="window.app.goToStage(1)" class="px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest text-brand-600 bg-brand-50 transition-all">Dashboard</button>
-                    <button onclick="window.app.goToStage(2)" class="px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-widest text-slate-400 hover:text-brand-500 hover:bg-brand-50/50 transition-all">Profile</button>
-                    <button onclick="window.app.goToStage(8)" class="px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-widest text-slate-400 hover:text-brand-500 hover:bg-brand-50/50 transition-all">History</button>
+                <div class="hidden md:flex items-center gap-1">
+                    <button data-nav-stage="1" onclick="window.app.goToStage(1)" class="nav-link"><i data-lucide="layout-dashboard" class="w-4 h-4"></i><span>Home</span></button>
+                    <button data-nav-stage="2" onclick="window.app.openEditProfile()" class="nav-link"><i data-lucide="user-round" class="w-4 h-4"></i><span>Profile</span></button>
+                    <button data-nav-stage="8" onclick="window.app.goToStage(8)" class="nav-link"><i data-lucide="clock-3" class="w-4 h-4"></i><span>History</span></button>
                 </div>
             </div>
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3 md:gap-6">
                 <button onclick="window.app.signOut()" class="w-10 h-10 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 transition-all shadow-sm" title="Log Out">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                 </button>
@@ -104,6 +172,11 @@
             </div>
         </div>
     </nav>
+    <div id="mobile-nav" class="hidden md:hidden fixed bottom-3 left-3 right-3 z-50 bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl rounded-2xl p-1.5 justify-around">
+        <button data-nav-stage="1" onclick="window.app.goToStage(1)" class="nav-link flex-col gap-1 flex-1"><i data-lucide="layout-dashboard" class="w-4 h-4"></i><span class="!block text-[10px]">Home</span></button>
+        <button data-nav-stage="2" onclick="window.app.openEditProfile()" class="nav-link flex-col gap-1 flex-1"><i data-lucide="user-round" class="w-4 h-4"></i><span class="!block text-[10px]">Profile</span></button>
+        <button data-nav-stage="8" onclick="window.app.goToStage(8)" class="nav-link flex-col gap-1 flex-1"><i data-lucide="clock-3" class="w-4 h-4"></i><span class="!block text-[10px]">History</span></button>
+    </div>
 
     <!-- Main Content Area -->
     <main class="flex-1 w-full max-w-6xl mx-auto px-6 py-8">
@@ -131,11 +204,15 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start mb-12">
                 <!-- Left: hero copy -->
                 <div class="lg:col-span-7 space-y-7">
-                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-[#EEF2FF] text-[#4F80FF] rounded-full text-[10px] font-black uppercase tracking-widest border border-[#E0E7FF]">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5 fill-current"></i> Practice smarter. Grow faster.
+                    <div class="page-kicker">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Adaptive interview practice
                     </div>
-                    <h2 class="text-[64px] font-black text-brand-900 tracking-tighter leading-[0.9]">Interview with <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-[#4F80FF] to-[#A37BFF]">confidence.</span></h2>
-                    <p class="text-base text-slate-500 max-w-md leading-relaxed font-medium">PrepWise helps students practice real interviews, get AI-powered feedback, and improve every day.</p>
+                    <h2 class="auth-hero-title font-black text-brand-900">Practice the interview.<br><span class="text-brand-500">Improve the answer.</span></h2>
+                    <p class="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">An AI interview coach that uses your background, the role, and each answer to ask a more relevant next question.</p>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <button onclick="window.app.continueAsGuest()" class="btn-primary px-7 py-3.5 flex items-center gap-2">Start interview practice <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+                        <span class="text-xs text-slate-500 flex items-center gap-1.5"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i> Your API key stays on the server</span>
+                    </div>
 
                     <div class="grid grid-cols-3 gap-4">
                         <div class="feature-card flex flex-col items-center text-center gap-3">
@@ -155,7 +232,7 @@
                         </div>
                     </div>
 
-                    <div class="animate-float">
+                    <div class="hidden">
                         <img src="illustration.png" alt="PrepWise Hero" class="w-full max-w-[420px] h-auto rounded-2xl shadow-soft" onerror="this.style.display='none'; document.getElementById('hero-fallback').classList.remove('hidden')">
                         <div id="hero-fallback" class="hidden w-full max-w-[420px] aspect-[4/3] bg-brand-50 rounded-2xl flex items-center justify-center border-2 border-dashed border-brand-100">
                             <div class="text-center p-8"><i data-lucide="image" class="w-10 h-10 text-brand-200 mx-auto mb-3"></i><p class="text-xs font-bold text-brand-300 uppercase tracking-widest">Save as <span class="text-brand-500">illustration.png</span></p></div>
@@ -165,7 +242,7 @@
 
                 <!-- Right: auth card -->
                 <div class="lg:col-span-5">
-                    <div class="bg-white rounded-3xl p-10 shadow-soft w-full border border-slate-100">
+                    <div class="auth-card bg-white p-8 md:p-10 w-full">
                         <div class="flex justify-center mb-7">
                             <div class="w-20 h-20 bg-[#F5F7FF] rounded-2xl flex items-center justify-center relative shadow-inner">
                                 <div class="bg-[#A37BFF]/20 p-4 rounded-full relative z-10">
@@ -175,8 +252,8 @@
                             </div>
                         </div>
                         <div class="text-center mb-7">
-                            <h3 id="auth-title" class="text-2xl font-black text-brand-900 tracking-tighter">Welcome back! 👋</h3>
-                            <p id="auth-subtitle" class="text-xs text-slate-400 font-medium mt-1">Let's continue your journey.</p>
+                            <h3 id="auth-title" class="text-2xl font-black text-brand-900 tracking-tighter">Save your progress</h3>
+                            <p id="auth-subtitle" class="text-sm text-slate-500 font-medium mt-1">Sign in to keep your reports and practice history.</p>
                         </div>
                         <form id="auth-form" class="space-y-3">
                             <div class="input-pill flex items-center px-4 py-3.5 rounded-xl"><i data-lucide="mail" class="w-4 h-4 text-slate-300 mr-3"></i><input type="email" id="auth-email" required class="bg-transparent w-full text-brand-900 font-bold placeholder:text-slate-300 outline-none text-sm" placeholder="University email"></div>
@@ -186,7 +263,7 @@
                         </form>
                         <div class="mt-5 space-y-4">
                             <div class="relative flex justify-center text-[9px] uppercase font-black tracking-widest text-slate-200"><span class="bg-white px-3 relative z-10">or</span><div class="absolute top-1/2 left-0 w-full h-[1px] bg-slate-100"></div></div>
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="hidden grid-cols-2 gap-3">
                                 <button onclick="window.app.simulateSocialLogin('Google')" class="py-3 rounded-xl border border-slate-100 bg-white text-slate-600 font-bold text-[10px] uppercase hover:bg-slate-50 transition-all flex items-center justify-center gap-2"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-3.5 h-3.5" alt="g"> Google</button>
                                 <button onclick="window.app.simulateSocialLogin('GitHub')" class="py-3 rounded-xl border border-slate-100 bg-white text-slate-600 font-bold text-[10px] uppercase hover:bg-slate-50 transition-all flex items-center justify-center gap-2"><i data-lucide="github" class="w-3.5 h-3.5 text-brand-900"></i> GitHub</button>
                             </div>
@@ -198,7 +275,7 @@
             </div>
 
             <!-- Testimonials -->
-            <div class="bg-white rounded-2xl p-8 shadow-soft border border-slate-100">
+            <div id="auth-testimonials" class="bg-white rounded-2xl p-8 shadow-soft border border-slate-100">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                     <div class="lg:col-span-3 space-y-2">
                         <div class="w-9 h-9 bg-blue-50 text-brand-500 rounded-lg flex items-center justify-center"><i data-lucide="heart" class="w-4 h-4 fill-current"></i></div>
@@ -228,13 +305,11 @@
         <!-- PAGE 1: DASHBOARD -->
         <section id="view-dashboard" class="view">
             <!-- Hero Section -->
-            <div class="mb-12 flex flex-col lg:flex-row lg:items-end justify-between gap-8 pb-8 border-b border-slate-100">
-                <div class="space-y-2">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-brand-50 text-brand-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-brand-100">
-                        <i data-lucide="sparkles" class="w-3 h-3 fill-current"></i> Your Career Growth Partner
-                    </div>
-                    <h1 id="dash-greeting" class="text-3xl font-black text-brand-900 tracking-tighter">Hi Guest — let's get you interview-ready.</h1>
-                    <p class="text-base text-slate-400 font-medium max-w-lg">Complete your profile, start a mock interview, and get a personalized report.</p>
+            <div class="mb-10 pb-8 border-b border-slate-200/70">
+                <div class="space-y-3">
+                    <div class="page-kicker"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Practice dashboard</div>
+                    <h1 class="text-4xl md:text-5xl font-black text-brand-900 tracking-[-0.045em] leading-tight">Welcome back, <span id="dash-welcome-name" class="text-brand-500">Guest</span>.</h1>
+                    <p id="dash-welcome-copy" class="text-base text-slate-500 font-medium max-w-2xl leading-relaxed">Your next useful step will appear here.</p>
                 </div>
             </div>
 
@@ -250,30 +325,32 @@
                                 <i data-lucide="sparkles" class="w-6 h-6 fill-current"></i>
                             </div>
                         </div>
-                        <div class="space-y-3">
-                            <h4 id="dash-session-suggestion-title" class="text-3xl font-black text-brand-900 tracking-tighter leading-tight">Start an Interview</h4>
-                            <p id="dash-session-suggestion-desc" class="text-sm text-slate-500 font-semibold leading-relaxed">Choose a mode and start practicing with the AI now.</p>
+                        <div id="dash-suggestion-copy" class="dashboard-copy space-y-3">
+                            <h4 id="dash-session-suggestion-title" class="dashboard-clamp-title text-3xl font-black text-brand-900 tracking-tighter leading-tight">Start an Interview</h4>
+                            <p id="dash-session-suggestion-desc" class="dashboard-clamp-copy text-sm text-slate-500 font-semibold leading-relaxed">Choose a mode and start practicing with the AI now.</p>
+                            <button data-dashboard-expand="dash-suggestion-copy" onclick="window.app.toggleDashboardCard(this)" class="dashboard-expand hidden">Show more</button>
                         </div>
                     </div>
                     <button id="dash-suggestion-btn" onclick="window.app.goToStage(3)" class="mt-8 btn-primary w-full py-4 text-[11px] uppercase tracking-widest rounded-2xl shadow-purple-500/20">Start session</button>
                 </div>
 
                 <!-- Focus Area -->
-                <div class="stat-card p-8 flex flex-col justify-between relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 w-24 h-24 bg-orange-50/50 rounded-bl-[100px] -mr-8 -mt-8 group-hover:scale-110 transition-transform"></div>
+                <div class="stat-card p-8 flex flex-col justify-between relative overflow-hidden group border-slate-100 bg-white">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-brand-50/40 rounded-bl-[100px] -mr-8 -mt-8 group-hover:scale-110 transition-transform"></div>
                     <div class="relative z-10">
                         <div class="flex items-center justify-between mb-6">
-                            <h3 class="font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">What to improve</h3>
-                            <div class="w-10 h-10 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center">
+                            <h3 class="font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Practice focus</h3>
+                            <div class="w-10 h-10 bg-brand-50 text-brand-500 rounded-2xl flex items-center justify-center">
                                 <i data-lucide="eye" class="w-5 h-5"></i>
                             </div>
                         </div>
-                        <div class="space-y-3">
-                            <h4 id="dash-focus-area-title" class="text-2xl font-black text-brand-900 tracking-tighter leading-tight">Focus Area</h4>
-                            <p id="dash-focus-area-desc" class="text-sm text-slate-400 font-semibold leading-relaxed">Complete your first interview to see your focus areas.</p>
+                        <div id="dash-focus-copy" class="dashboard-copy space-y-3">
+                            <h4 id="dash-focus-area-title" class="dashboard-clamp-title text-2xl font-black text-brand-900 tracking-tighter leading-tight">What to practice next</h4>
+                            <p id="dash-focus-area-desc" class="dashboard-clamp-copy text-sm text-slate-500 font-semibold leading-relaxed">One clear skill to improve before your next interview.</p>
+                            <button data-dashboard-expand="dash-focus-copy" onclick="window.app.toggleDashboardCard(this)" class="dashboard-expand hidden">Show more</button>
                         </div>
                     </div>
-                    <button id="dash-focus-btn" onclick="window.app.startPractice()" class="mt-8 py-3 bg-orange-50/50 hover:bg-orange-500 hover:text-white text-orange-600 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all w-full border border-orange-100 group-hover:border-transparent">Practice this</button>
+                    <button id="dash-focus-btn" onclick="window.app.startPractice()" class="mt-8 py-3 bg-slate-50 hover:bg-brand-500 hover:text-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all w-full border border-slate-100 group-hover:border-transparent">Practice this area</button>
                 </div>
 
                 <!-- Readiness Score -->
@@ -286,12 +363,13 @@
                                 <i data-lucide="target" class="w-5 h-5"></i>
                             </div>
                         </div>
-                        <div id="dash-score-container" class="space-y-3">
+                        <div id="dash-score-copy" class="dashboard-copy space-y-3">
                             <div class="flex items-end gap-1">
                                 <span id="dash-readiness-score" class="text-6xl font-black text-brand-900 tracking-tighter">--</span>
                                 <span class="text-xl text-slate-300 font-black mb-2 uppercase">/100</span>
                             </div>
-                            <p id="dash-readiness-desc" class="text-sm text-slate-400 font-semibold leading-relaxed">Complete an interview to unlock your score.</p>
+                            <p id="dash-readiness-desc" class="dashboard-clamp-copy text-sm text-slate-400 font-semibold leading-relaxed">Complete an interview to unlock your score.</p>
+                            <button data-dashboard-expand="dash-score-copy" onclick="window.app.toggleDashboardCard(this)" class="dashboard-expand hidden">Show more</button>
                         </div>
                     </div>
                     <button id="dash-score-btn" onclick="window.app.goToStage(8)" class="mt-8 py-3 bg-slate-50 hover:bg-brand-500 hover:text-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all w-full border border-slate-100 group-hover:border-transparent">View reports</button>
@@ -314,7 +392,7 @@
                             </div>
                             <div>
                                 <div class="flex items-center gap-3 mb-2">
-                                    <span id="dash-recent-type" class="badge-premium">Technical</span>
+                                    <span id="dash-recent-type" class="text-xs font-semibold text-slate-500">Technical</span>
                                     <span id="dash-recent-date" class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Today</span>
                                 </div>
                                 <p id="dash-recent-job" class="text-2xl font-black text-brand-900 tracking-tighter">Software Engineer role</p>
@@ -368,32 +446,68 @@
 
         <!-- PAGE 2: PROFILE -->
         <section id="view-profile" class="view">
-            <div class="max-w-3xl mx-auto">
-                <div class="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 class="text-2xl font-bold text-slate-900">Your Profile</h1>
-                        <p class="text-sm text-slate-500 mt-1">This helps the AI tailor the interview specifically to your background.</p>
+            <div id="profile-form" class="max-w-5xl mx-auto space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_.8fr] gap-6 items-start">
+                    <div class="space-y-3">
+                        <div class="page-kicker"><i data-lucide="user-round" class="w-3.5 h-3.5"></i> Profile</div>
+                        <h1 class="text-3xl font-black text-slate-900 tracking-tight">Your interview profile</h1>
+                        <p class="text-sm text-slate-500 max-w-xl leading-relaxed">A complete profile helps PrepWise ask better interview questions.</p>
+                        <div class="flex flex-wrap items-center gap-2 pt-1 text-sm text-slate-500">
+                            <span id="prof-header-name" class="font-semibold text-slate-700">Profile name</span>
+                            <span class="text-slate-300">•</span>
+                            <span id="prof-header-role">Target role / field</span>
+                        </div>
                     </div>
-                    <button onclick="window.app.saveProfile()" class="btn-primary">Save Profile</button>
+                    <div class="card p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">Profile strength</p>
+                                <p id="prof-strength-note" class="text-sm text-slate-500 mt-2 leading-relaxed">Add a few core details to help PrepWise personalize the interview.</p>
+                            </div>
+                            <span id="prof-strength-pct" class="text-3xl font-black text-brand-900">0%</span>
+                        </div>
+                        <div class="score-bar mt-4"><span id="prof-strength-bar" style="width:0%"></span></div>
+                        <div id="prof-missing" class="mt-4 flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
+                <div class="trust-note">
+                    <i data-lucide="shield-check" class="w-5 h-5 shrink-0 mt-0.5"></i>
+                    <div><p class="text-sm font-bold">You stay in control</p><p class="text-xs mt-1 opacity-80">CV information is shown for review before saving. Empty or low-confidence extraction never replaces stronger information automatically.</p></div>
                 </div>
                 
-                <div class="space-y-6">
-                    <!-- Basic Info -->
-                    <div class="card space-y-4">
-                        <h3 class="font-semibold text-slate-800 border-b border-slate-100 pb-3">Basic Information</h3>
+                <div class="space-y-5">
+                    <section class="profile-section-card">
+                        <div class="profile-section-head">
+                            <div class="flex items-start gap-3">
+                                <span class="profile-icon"><i data-lucide="user-round" class="w-4 h-4"></i></span>
+                                <div><h3 class="section-heading">Basic info</h3><p class="section-copy mt-1">Your role, background, and contact details.</p></div>
+                            </div>
+                        </div>
+                        <div class="profile-section-body">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Full Name</label>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Full name</label>
                                 <input type="text" id="prof-name" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium" placeholder="e.g. Jane Doe">
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Target Field</label>
-                                <select id="prof-field" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium bg-white">
-                                    <!-- Populated via JS -->
-                                </select>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Target field</label>
+                                <select id="prof-field" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium bg-white"></select>
                             </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">LinkedIn Profile URL</label>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Target role</label>
+                                <input type="text" id="prof-target-role" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium" placeholder="e.g. Junior Data Analyst">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Location</label>
+                                <input type="text" id="prof-location" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium" placeholder="City, country">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Phone</label>
+                                <input type="tel" id="prof-phone" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium" placeholder="Phone number">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">LinkedIn</label>
                                 <div class="relative">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i data-lucide="linkedin" class="w-4 h-4 text-slate-300"></i>
@@ -401,41 +515,111 @@
                                     <input type="url" id="prof-linkedin" class="w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium" placeholder="https://linkedin.com/in/yourprofile">
                                 </div>
                             </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Professional summary</label>
+                                <textarea id="prof-summary" class="w-full px-3 py-3 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm min-h-[90px]" placeholder="A short summary of your background, interests, and goals."></textarea>
+                            </div>
                         </div>
+                        </div>
+                    </section>
+
+                    <section class="profile-section-card">
+                        <div class="profile-section-head">
+                            <div class="flex items-start gap-3">
+                                <span class="profile-icon"><i data-lucide="graduation-cap" class="w-4 h-4"></i></span>
+                                <div><h3 class="section-heading">Education</h3><p class="section-copy mt-1">Add each program separately.</p></div>
+                            </div>
+                            <button type="button" onclick="window.app.addEducationEntry()" class="profile-add-button">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add education
+                            </button>
+                        </div>
+                        <div class="profile-section-body space-y-5">
+                            <div id="prof-education-list" class="space-y-4"></div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Relevant courses</label>
+                                <textarea id="prof-courses" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium min-h-[70px]" placeholder="Algorithms, Database Systems, Business Strategy..."></textarea>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <section class="profile-section-card">
+                            <div class="profile-section-head">
+                                <div class="flex items-start gap-3">
+                                    <span class="profile-icon"><i data-lucide="folder-kanban" class="w-4 h-4"></i></span>
+                                    <div><h3 class="section-heading">Projects</h3><p class="section-copy mt-1">Keep each project concise and specific.</p></div>
+                                </div>
+                                <button type="button" onclick="window.app.focusProfileField('prof-projects')" class="profile-add-button"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add project</button>
+                            </div>
+                            <div class="profile-section-body">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Project name, role, technologies, and outcome</label>
+                                <textarea id="prof-projects" class="w-full px-3 py-3 border border-slate-200 text-sm min-h-[130px]" placeholder="Portfolio website — Frontend developer — React, CSS — Improved mobile usability..."></textarea>
+                            </div>
+                        </section>
+
+                        <section class="profile-section-card">
+                            <div class="profile-section-head">
+                                <div class="flex items-start gap-3">
+                                    <span class="profile-icon"><i data-lucide="briefcase-business" class="w-4 h-4"></i></span>
+                                    <div><h3 class="section-heading">Experience</h3><p class="section-copy mt-1">Work, internships, and volunteering.</p></div>
+                                </div>
+                                <button type="button" onclick="window.app.focusProfileField('prof-experience')" class="profile-add-button"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add experience</button>
+                            </div>
+                            <div class="profile-section-body">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Role, organization, dates, and contribution</label>
+                                <textarea id="prof-experience" class="w-full px-3 py-3 border border-slate-200 text-sm min-h-[130px]" placeholder="Data intern — Company — Summer 2025 — Cleaned data and built weekly reports..."></textarea>
+                            </div>
+                        </section>
                     </div>
 
-                    <!-- Skills & Education -->
-                    <div class="card space-y-4">
-                        <h3 class="font-semibold text-slate-800 border-b border-slate-100 pb-3">Skills & Education</h3>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Top Skills (comma separated)</label>
-                            <input type="text" id="prof-skills" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium" placeholder="React, Python, Data Analysis, Leadership...">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Relevant Courses</label>
-                            <textarea id="prof-courses" class="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm font-medium min-h-[60px]" placeholder="Algorithms, Database Systems, Business Strategy..."></textarea>
-                        </div>
-                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <section class="profile-section-card">
+                            <div class="profile-section-head">
+                                <div class="flex items-start gap-3">
+                                    <span class="profile-icon"><i data-lucide="code-2" class="w-4 h-4"></i></span>
+                                    <div><h3 class="section-heading">Skills</h3><p class="section-copy mt-1">Group related skills with commas.</p></div>
+                                </div>
+                                <button type="button" onclick="window.app.focusProfileField('prof-skills')" class="profile-add-button"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add skill</button>
+                            </div>
+                            <div class="profile-section-body space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Programming, tools, databases, soft skills, and other</label>
+                                    <textarea id="prof-skills" class="w-full px-3 py-3 border border-slate-200 text-sm min-h-[105px]" placeholder="Programming: Python, JavaScript&#10;Tools: Git, Figma&#10;Soft skills: Communication, Teamwork"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Certifications</label>
+                                    <textarea id="prof-certifications" class="w-full px-3 py-3 border border-slate-200 text-sm min-h-[75px]" placeholder="One certification per line"></textarea>
+                                </div>
+                            </div>
+                        </section>
 
-                    <div class="card space-y-4">
-                        <h3 class="font-semibold text-slate-800 border-b border-slate-100 pb-3">Projects & Experience</h3>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Work / Volunteer / Project Experience</label>
-                            <textarea id="prof-experience" class="w-full px-3 py-3 border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm min-h-[120px]" placeholder="Briefly describe 1-2 projects or jobs. The AI will ask you about these!"></textarea>
-                        </div>
+                        <section class="profile-section-card">
+                            <div class="profile-section-head">
+                                <div class="flex items-start gap-3">
+                                    <span class="profile-icon"><i data-lucide="languages" class="w-4 h-4"></i></span>
+                                    <div><h3 class="section-heading">Languages</h3><p class="section-copy mt-1">Add proficiency when you know it.</p></div>
+                                </div>
+                                <button type="button" onclick="window.app.focusProfileField('prof-languages')" class="profile-add-button"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add language</button>
+                            </div>
+                            <div class="profile-section-body">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Language — proficiency</label>
+                                <textarea id="prof-languages" class="w-full px-3 py-3 border border-slate-200 text-sm min-h-[130px]" placeholder="Arabic — Native&#10;English — Fluent&#10;Hebrew — Professional"></textarea>
+                                <p class="text-xs text-slate-400 mt-2">Use one language per line for a cleaner profile.</p>
+                            </div>
+                        </section>
                     </div>
                 </div>
 
-                <!-- CV Import / Autofill (Moved to bottom) -->
-                <div class="card mt-8 border-brand-100 bg-brand-50/20">
+                <!-- CV Import / Autofill -->
+                <div class="card border-brand-100 bg-brand-50/20">
                     <div class="flex items-center justify-between cursor-pointer" onclick="window.app.toggleCVImport()">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 bg-brand-500 text-white rounded-xl flex items-center justify-center shadow-sm">
                                 <i data-lucide="sparkles" class="w-5 h-5"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-brand-900 text-sm">Autofill from CV</h3>
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Paste your CV or upload a PDF to instantly fill your profile</p>
+                                <h3 class="font-bold text-brand-900 text-sm">CV upload & extracted info</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Upload a PDF or paste text. You will review everything before it is saved.</p>
                             </div>
                         </div>
                         <i id="cv-chevron" data-lucide="chevron-down" class="w-5 h-5 text-slate-400 transition-transform"></i>
@@ -453,7 +637,7 @@
                                 <textarea id="cv-text-input" class="w-full min-h-[150px] p-4 text-sm border border-slate-200 rounded-xl focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none resize-none transition-all bg-white" placeholder="Paste your CV text here..."></textarea>
                             </div>
                             <div class="flex items-center justify-between">
-                                <p class="text-[10px] text-slate-400 font-medium">AI will extract name, skills, and projects.</p>
+                                <p class="text-[10px] text-slate-400 font-medium">AI will extract structured education, skills, experience, and projects.</p>
                                 <button onclick="window.app.autofillFromCV()" class="btn-primary py-2 px-6 text-xs shadow-md flex items-center gap-2">
                                     <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Parse Text
                                 </button>
@@ -480,6 +664,17 @@
                         </div>
 
                         <p id="cv-import-status" class="hidden text-center text-xs font-bold text-green-600 py-2"></p>
+                        <div id="cv-fallback-actions" class="hidden flex flex-wrap justify-center gap-3">
+                            <button type="button" onclick="window.app.switchCVTab('paste')" class="btn-secondary py-2 px-4 text-xs">Paste CV text</button>
+                            <button type="button" onclick="document.getElementById('profile-form').scrollIntoView({ behavior: 'smooth' })" class="btn-secondary py-2 px-4 text-xs">Fill profile manually</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                    <div><p class="text-sm font-bold text-slate-800">Ready to build the interview?</p><p class="text-xs text-slate-500 mt-1">You can return and update your profile at any time.</p></div>
+                    <div class="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
+                        <button onclick="window.app.saveProfile()" class="btn-secondary w-full sm:w-auto">Save changes</button>
+                        <button onclick="window.app.saveProfile(true)" class="btn-primary w-full sm:w-auto flex items-center justify-center gap-2">Save and continue <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
                     </div>
                 </div>
             </div>
@@ -487,96 +682,114 @@
 
         <!-- PAGE 3: SETUP WIZARD -->
         <section id="view-setup" class="view">
-            <div class="max-w-2xl mx-auto">
+            <div class="max-w-3xl mx-auto">
                 <div class="mb-8 text-center">
-                    <h1 class="text-2xl font-bold text-slate-900 mb-2">Interview Setup</h1>
-                    <p class="text-slate-500 text-sm">Configure your mock session.</p>
+                    <span class="page-kicker mb-3"><i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i> Session setup</span>
+                    <h1 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">Build your practice interview</h1>
+                    <p class="text-slate-500 text-sm">A few choices help PrepWise make every question relevant.</p>
                 </div>
 
                 <!-- Wizard Steps Container -->
                 <div class="card relative overflow-hidden min-h-[400px] flex flex-col">
                     <!-- Progress Bar -->
-                    <div class="absolute top-0 left-0 w-full h-1.5 bg-slate-100">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-slate-100">
                         <div id="wizard-progress" class="h-full bg-brand-500 transition-all duration-300 w-1/4"></div>
                     </div>
 
-                    <div class="p-4 flex-1">
+                    <div class="px-2 pt-3 flex items-center justify-between text-xs text-slate-400"><span id="wizard-step-label" class="font-bold text-brand-600">Step 1 of 6</span><span>About 2 minutes</span></div>
+                    <div class="p-2 md:p-4 flex-1">
                         <!-- Step 1: Goal -->
                         <div id="wiz-step-1" class="wizard-step block animate-fadeIn space-y-4 mt-4">
-                            <h2 class="text-lg font-bold text-slate-800 mb-4">1. What's your goal today?</h2>
+                            <div><h2 class="text-xl font-black text-slate-900">What are you preparing for?</h2><p class="section-copy mt-1">Choose a real role for tailored questions, or practice without a job description.</p></div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="wizard-option selected" onclick="window.app.selectWizOption('goal', 'specific', this)">
-                                    <div class="flex items-center gap-3 mb-1"><i data-lucide="briefcase" class="w-5 h-5 text-brand-500"></i> <span class="font-bold text-slate-800">Specific Job</span></div>
-                                    <p class="text-xs text-slate-500 ml-8">Practice for a real job description you have.</p>
+                                    <div class="flex items-center gap-3 mb-1"><i data-lucide="briefcase" class="w-5 h-5 text-brand-500"></i> <span class="font-bold text-slate-800">A specific role</span></div>
+                                    <p class="text-xs text-slate-500 ml-8">Use a job description to tailor topics and expectations.</p>
                                 </div>
                                 <div class="wizard-option" onclick="window.app.selectWizOption('goal', 'general', this)">
-                                    <div class="flex items-center gap-3 mb-1"><i data-lucide="compass" class="w-5 h-5 text-slate-400"></i> <span class="font-bold text-slate-800">General Practice</span></div>
-                                    <p class="text-xs text-slate-500 ml-8">Just hone my general interview skills.</p>
+                                    <div class="flex items-center gap-3 mb-1"><i data-lucide="compass" class="w-5 h-5 text-slate-400"></i> <span class="font-bold text-slate-800">General practice</span></div>
+                                    <p class="text-xs text-slate-500 ml-8">Use my profile and target role as the context.</p>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Step 2: Job Desc (Conditional) -->
                         <div id="wiz-step-2" class="wizard-step hidden animate-fadeIn space-y-4 mt-4">
-                            <h2 class="text-lg font-bold text-slate-800 mb-4">2. Paste the Job Description</h2>
-                            <textarea id="wiz-job-desc" class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm min-h-[200px]" placeholder="Paste the responsibilities and requirements here..."></textarea>
+                            <div><h2 class="text-xl font-black text-slate-900">Add the job description</h2><p class="section-copy mt-1">PrepWise compares the role with your profile and uses both when choosing questions.</p></div>
+                            <textarea id="wiz-job-desc" oninput="window.app.updateWizardControls()" class="w-full px-4 py-4 border border-slate-200 rounded-xl outline-none text-sm min-h-[230px]" placeholder="Paste the role overview, responsibilities, and requirements here..."></textarea>
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="text-xs text-slate-500 flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i> Used only to personalize this interview.</div>
+                                <label class="btn-secondary cursor-pointer text-xs flex items-center gap-2"><i data-lucide="upload" class="w-4 h-4"></i> Upload PDF or text<input type="file" accept=".pdf,.txt,text/plain,application/pdf" class="hidden" onchange="window.app.handleJobDescriptionUpload(event)"></label>
+                            </div>
+                            <p id="wiz-job-status" class="hidden text-xs font-semibold rounded-lg px-3 py-2"></p>
                         </div>
 
                         <!-- Step 3: Style -->
                         <div id="wiz-step-3" class="wizard-step hidden animate-fadeIn space-y-4 mt-4">
-                            <h2 class="text-lg font-bold text-slate-800 mb-4">3. Choose Interview Style</h2>
+                            <div><h2 class="text-xl font-black text-slate-900">Choose the interview type</h2><p class="section-copy mt-1">This controls what the interviewer evaluates—not just its tone.</p></div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="wizard-option selected" onclick="window.app.selectWizOption('style', 'hr', this)">
-                                    <div class="font-bold text-slate-800 mb-1">HR / Behavioral</div>
-                                    <p class="text-xs text-slate-500">Focus on teamwork, motivation, and STAR method.</p>
+                                    <div class="font-bold text-slate-800 mb-1">HR interview</div><p class="text-xs text-slate-500">Motivation, role fit, collaboration, and career goals.</p>
                                 </div>
                                 <div class="wizard-option" onclick="window.app.selectWizOption('style', 'technical', this)">
-                                    <div class="font-bold text-slate-800 mb-1">Technical Deep-Dive</div>
-                                    <p class="text-xs text-slate-500">Focus on implementation, tools, and technical trade-offs.</p>
+                                    <div class="font-bold text-slate-800 mb-1">Technical interview</div><p class="text-xs text-slate-500">Knowledge, implementation choices, and trade-offs.</p>
                                 </div>
-                                <div class="wizard-option" onclick="window.app.selectWizOption('style', 'project', this)">
-                                    <div class="font-bold text-slate-800 mb-1">Project Deep-Dive</div>
-                                    <p class="text-xs text-slate-500">Thoroughly explore one of your past projects.</p>
+                                <div class="wizard-option" onclick="window.app.selectWizOption('style', 'behavioral', this)">
+                                    <div class="font-bold text-slate-800 mb-1">Behavioral interview</div><p class="text-xs text-slate-500">Past examples, ownership, conflict, and the STAR method.</p>
                                 </div>
-                                <div class="wizard-option" onclick="window.app.selectWizOption('style', 'friendly', this)">
-                                    <div class="font-bold text-slate-800 mb-1">Friendly / Relaxed</div>
-                                    <p class="text-xs text-slate-500">Warm tone, great for first-time practice.</p>
+                                <div class="wizard-option" onclick="window.app.selectWizOption('style', 'situational', this)">
+                                    <div class="font-bold text-slate-800 mb-1">Situational interview</div><p class="text-xs text-slate-500">Realistic “what would you do?” workplace scenarios.</p>
+                                </div>
+                                <div class="wizard-option md:col-span-2" onclick="window.app.selectWizOption('style', 'mixed', this)">
+                                    <div class="font-bold text-slate-800 mb-1">Mixed final-round practice</div><p class="text-xs text-slate-500">A balanced set of HR, behavioral, situational, and role-specific questions.</p>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Step 4: Mood -->
                         <div id="wiz-step-4" class="wizard-step hidden animate-fadeIn space-y-4 mt-4">
-                            <h2 class="text-lg font-bold text-slate-800 mb-4">4. Choose Interviewer Mood</h2>
-                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div><h2 class="text-xl font-black text-slate-900">Choose the challenge level</h2><p class="section-copy mt-1">The interviewer stays respectful at every level. This changes how deeply it probes.</p></div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div class="wizard-option selected flex flex-col items-center text-center gap-2" onclick="window.app.selectWizOption('mood', 'professional', this)">
                                     <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><i data-lucide="briefcase" class="w-5 h-5 text-slate-600"></i></div>
-                                    <div class="font-bold text-slate-800 text-xs">Professional</div>
+                                    <div class="font-bold text-slate-800 text-xs">Balanced</div><p class="text-[11px] text-slate-500">Realistic pacing and follow-ups</p>
                                 </div>
                                 <div class="wizard-option flex flex-col items-center text-center gap-2" onclick="window.app.selectWizOption('mood', 'friendly', this)">
                                     <div class="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center"><i data-lucide="smile" class="w-5 h-5 text-green-500"></i></div>
-                                    <div class="font-bold text-slate-800 text-xs">Friendly</div>
+                                    <div class="font-bold text-slate-800 text-xs">Supportive</div><p class="text-[11px] text-slate-500">Gentler prompts for practice</p>
                                 </div>
                                 <div class="wizard-option flex flex-col items-center text-center gap-2" onclick="window.app.selectWizOption('mood', 'hard', this)">
                                     <div class="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center"><i data-lucide="flame" class="w-5 h-5 text-red-500"></i></div>
-                                    <div class="font-bold text-slate-800 text-xs">Challenging</div>
-                                </div>
-                                <div class="wizard-option flex flex-col items-center text-center gap-2" onclick="window.app.selectWizOption('mood', 'casual', this)">
-                                    <div class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center"><i data-lucide="coffee" class="w-5 h-5 text-blue-500"></i></div>
-                                    <div class="font-bold text-slate-800 text-xs">Casual</div>
+                                    <div class="font-bold text-slate-800 text-xs">Challenging</div><p class="text-[11px] text-slate-500">Deeper probing and pressure</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Step 5: Preview -->
+                        <!-- Step 5: Interview length -->
                         <div id="wiz-step-5" class="wizard-step hidden animate-fadeIn space-y-4 mt-4">
-                            <h2 class="text-lg font-bold text-slate-800 mb-6 text-center">Ready to Start!</h2>
-                            <div class="bg-slate-50 border border-slate-100 rounded-xl p-6 space-y-4 max-w-sm mx-auto">
+                            <div><h2 class="text-xl font-black text-slate-900">Choose the interview length</h2><p class="section-copy mt-1">Short practice moves through topics quickly. Full practice allows more depth and follow-ups.</p></div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="wizard-option selected" onclick="window.app.selectWizOption('length', 'short', this)">
+                                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-xl bg-indigo-50 text-brand-600 flex items-center justify-center"><i data-lucide="timer" class="w-5 h-5"></i></div><div><p class="font-bold text-slate-800">Short interview</p><p class="text-xs text-slate-500">About 10–15 minutes</p></div></div>
+                                    <ul class="text-xs text-slate-500 space-y-1.5 ml-1"><li>• 6 main questions</li><li>• Up to 1 focused follow-up</li><li>• Fast coverage of key topics</li></ul>
+                                </div>
+                                <div class="wizard-option" onclick="window.app.selectWizOption('length', 'full', this)">
+                                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i data-lucide="messages-square" class="w-5 h-5"></i></div><div><p class="font-bold text-slate-800">Full practice interview</p><p class="text-xs text-slate-500">About 30–45 minutes</p></div></div>
+                                    <ul class="text-xs text-slate-500 space-y-1.5 ml-1"><li>• 14 main questions</li><li>• Up to 4 natural follow-ups</li><li>• Deeper role and skill coverage</li></ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 6: Preview -->
+                        <div id="wiz-step-6" class="wizard-step hidden animate-fadeIn space-y-4 mt-4">
+                            <div class="text-center"><h2 class="text-2xl font-black text-slate-900">Your interview is ready</h2><p id="wiz-preview-description" class="section-copy mt-1">6 main questions with up to 1 follow-up.</p></div>
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-4 max-w-md mx-auto">
                                 <div class="flex justify-between items-center"><span class="text-sm text-slate-500">Style</span><span id="wiz-prev-style" class="text-sm font-bold text-slate-800">HR / Behavioral</span></div>
                                 <div class="flex justify-between items-center"><span class="text-sm text-slate-500">Mood</span><span id="wiz-prev-mood" class="text-sm font-bold text-slate-800">Professional</span></div>
                                 <div class="flex justify-between items-center"><span class="text-sm text-slate-500">Context</span><span id="wiz-prev-context" class="text-sm font-bold text-slate-800">Specific Job</span></div>
+                                <div class="flex justify-between items-center"><span class="text-sm text-slate-500">Length</span><span id="wiz-prev-length" class="text-sm font-bold text-slate-800">Short interview</span></div>
                             </div>
-                            <p class="text-center text-xs text-slate-400 mt-4"><i data-lucide="info" class="w-3 h-3 inline"></i> You can type or use speech-to-text to answer.</p>
+                            <div class="trust-note max-w-md mx-auto"><i data-lucide="brain-circuit" class="w-5 h-5 shrink-0"></i><p class="text-xs"><strong>The AI will use:</strong> your saved profile, CV details, target role, and job description. Each answer determines whether the next question is a follow-up or a new topic.</p></div>
                         </div>
                     </div>
 
@@ -591,15 +804,21 @@
 
         <!-- PAGE 4: INTERVIEW SESSION -->
         <section id="view-interview" class="view">
-            <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="max-w-5xl mx-auto">
+                <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+                    <div><div class="page-kicker mb-2"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span> <span id="int-header-length">Short interview</span></div><h1 class="text-2xl font-black text-slate-900">Interview room</h1><p class="text-sm text-slate-500 mt-1">Answer naturally. PrepWise will adapt the next question to what you say.</p></div>
+                    <button onclick="window.app.goBack()" class="btn-secondary text-xs">Exit session</button>
+                </div>
+                <div id="int-ai-state" class="interview-status-strip mb-5 flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4"></i><span>Waiting for your answer</span></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <!-- Center Area: Q&A -->
                 <div class="lg:col-span-2 space-y-6 flex flex-col h-full">
                     
                     <!-- Question Card -->
-                    <div class="card bg-white shadow-md border-slate-200">
+                    <div class="card bg-white border-slate-200">
                         <div class="flex items-center justify-between mb-4">
-                            <span id="int-type-label" class="text-[10px] font-bold uppercase tracking-wider text-brand-600 bg-brand-50 px-2.5 py-1 rounded-md">HR Interview</span>
+                            <div class="flex flex-wrap items-center gap-2"><span id="int-type-label" class="text-xs font-semibold text-brand-700">HR interview</span><span id="int-stage-label" class="text-xs font-semibold text-slate-500">Opening</span><span id="int-question-kind" class="text-xs font-semibold text-slate-500">Opening question</span></div>
                             <span id="int-q-counter" class="text-xs font-semibold text-slate-400">Question 1</span>
                         </div>
                         <div class="flex items-start gap-4">
@@ -607,16 +826,22 @@
                                 <i data-lucide="bot" class="w-5 h-5"></i>
                             </div>
                             <div class="flex-1">
-                                <p id="interviewer-question-text" class="text-lg font-semibold text-slate-800 leading-snug">Loading question...</p>
+                                <p id="interviewer-question-text" class="text-xl font-bold text-slate-800 leading-relaxed">Loading question...</p>
+                                <p id="int-question-reason" class="mt-3 text-sm text-slate-500 leading-relaxed">This question checks your fit for the role.</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Answer Area -->
                     <div class="card flex-1 flex flex-col bg-slate-50/50">
-                        <p class="text-xs font-semibold text-slate-500 mb-3 flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5"></i> Your Answer</p>
+                        <div class="flex items-center justify-between mb-3"><p class="text-xs font-semibold text-slate-500 flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5"></i> Your answer</p><span id="int-answer-count" class="text-xs text-slate-400">0 characters</span></div>
                         
-                        <textarea id="int-answer-area" class="w-full flex-1 bg-white border border-slate-200 rounded-xl p-4 text-sm text-slate-800 leading-relaxed outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-inner resize-none" placeholder="Type your answer here, or click the microphone to speak..."></textarea>
+                        <textarea id="int-answer-area" oninput="window.app.updateAnswerState()" class="w-full flex-1 bg-white border border-slate-200 rounded-xl p-4 text-sm text-slate-800 leading-relaxed outline-none resize-none min-h-[230px]" placeholder="Type your answer here. A useful answer usually includes the situation, what you did, and the result."></textarea>
+                        <div id="int-clarification-panel" class="hidden mt-3 p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-950 space-y-3">
+                            <div><p class="text-xs font-bold text-indigo-600 mb-1">Simpler version</p><p id="int-clarified-question"></p></div>
+                            <div><p class="text-xs font-bold text-indigo-600 mb-1">What the interviewer is checking</p><p id="int-clarified-purpose"></p></div>
+                            <div><p class="text-xs font-bold text-indigo-600 mb-1">Small hint</p><p id="int-clarified-hint"></p></div>
+                        </div>
                         
                         <div class="mt-4 flex flex-col sm:flex-row gap-3 justify-between items-center border-t border-slate-200 pt-4">
                             <div class="flex gap-2 w-full sm:w-auto">
@@ -626,8 +851,9 @@
                                 <button onclick="window.app.clearAnswer()" class="btn-secondary px-3 py-2.5 text-slate-400 hover:text-red-500 hover:border-red-200" title="Clear text">
                                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                 </button>
+                                <button id="int-clarify-btn" onclick="window.app.clarifyCurrentQuestion()" class="btn-secondary px-4 py-2.5 text-sm flex items-center gap-2"><i data-lucide="message-circle-question" class="w-4 h-4"></i> Explain / rephrase</button>
                             </div>
-                            <button onclick="window.app.submitInterviewAnswer()" id="int-submit-btn" class="w-full sm:w-auto btn-primary flex items-center justify-center gap-2 px-8 py-2.5 text-sm shadow-md">
+                            <button disabled onclick="window.app.submitInterviewAnswer()" id="int-submit-btn" class="w-full sm:w-auto btn-primary flex items-center justify-center gap-2 px-8 py-2.5 text-sm shadow-md">
                                 Submit Answer <i data-lucide="send" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -636,40 +862,39 @@
 
                 <!-- Side Panel: Progress & Tips -->
                 <div class="lg:col-span-1 space-y-6">
-                    <div class="card bg-slate-900 text-white border-none shadow-lg">
-                        <h3 class="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4"></i> Interview Progress</h3>
+                    <div class="card bg-white">
+                        <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-brand-500"></i> Your progress</h3>
+                        <div class="mb-5"><div class="flex items-center justify-between text-xs mb-2"><span id="int-progress-summary" class="font-semibold text-slate-600">Question 1</span><span id="int-progress-percent" class="font-bold text-brand-600">0%</span></div><div class="score-bar"><span id="int-progress-bar" style="width:0%"></span></div></div>
                         <!-- Timeline -->
-                        <div class="space-y-4 relative before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-slate-700" id="int-progress-timeline">
+                        <div class="space-y-2" id="int-progress-timeline">
                             <!-- Injected via JS -->
                         </div>
                     </div>
 
-                    <div class="card bg-blue-50 border-blue-100">
-                        <h3 class="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center gap-1.5"><i data-lucide="lightbulb" class="w-3.5 h-3.5"></i> Pro Tip</h3>
-                        <p class="text-sm text-blue-900 leading-relaxed font-medium">Use the <strong class="bg-blue-200 px-1 rounded">STAR</strong> method:<br><br>
-                        • <strong class="text-blue-700">S</strong>ituation: Set the scene and context.<br>
-                        • <strong class="text-blue-700">T</strong>ask: Describe what you needed to do.<br>
-                        • <strong class="text-blue-700">A</strong>ction: Explain exactly what you did.<br>
-                        • <strong class="text-blue-700">R</strong>esult: Share the outcome you achieved.</p>
+                    <div class="card bg-slate-50">
+                        <h3 class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="brain-circuit" class="w-3.5 h-3.5 text-brand-500"></i> What happens next?</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">After you submit, the AI checks relevance and specificity. It may ask a follow-up about your answer or move to a new interview topic.</p>
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <button onclick="window.app.skipQuestion()" class="btn-secondary text-xs w-full text-slate-500 text-left flex justify-between items-center">
-                            Don't know? Skip question <i data-lucide="skip-forward" class="w-3.5 h-3.5"></i>
+                        <button id="int-skip-btn" onclick="window.app.skipQuestion()" class="btn-secondary text-xs w-full text-slate-500 text-left flex justify-between items-center">
+                            Skip this question <i data-lucide="skip-forward" class="w-3.5 h-3.5"></i>
                         </button>
+                        <p class="text-[11px] text-slate-400 px-2">Skipped questions are saved separately and are not scored as answered questions.</p>
                     </div>
                 </div>
+            </div>
             </div>
         </section>
 
         <!-- PAGE 5: COMPLETION SCREEN -->
         <section id="view-completion" class="view">
-            <div class="max-w-md mx-auto mt-20 text-center space-y-6">
-                <div class="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                    <i data-lucide="check" class="w-12 h-12"></i>
+            <div class="max-w-xl mx-auto mt-12 text-center space-y-6 card p-10">
+                <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-emerald-100">
+                    <i data-lucide="check" class="w-8 h-8"></i>
                 </div>
-                <h1 class="text-3xl font-bold text-slate-900">Interview Complete!</h1>
-                <p class="text-slate-500 text-lg">Great job. The AI is now analyzing your answers, measuring your performance, and crafting a personalized report.</p>
+                <div><div id="completion-question-count" class="page-kicker mb-3">Interview completed</div><h1 class="text-3xl font-black text-slate-900">Your interview is complete</h1></div>
+                <p class="text-slate-500 text-base leading-relaxed">PrepWise is reviewing each answer for relevance, structure, clarity, evidence, and role-specific depth.</p>
                 
                 <div class="py-8">
                     <div class="flex justify-center gap-2 mb-4">
@@ -677,7 +902,7 @@
                         <div class="w-3 h-3 bg-brand-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
                         <div class="w-3 h-3 bg-brand-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
                     </div>
-                    <p id="completion-status-text" class="text-sm font-semibold text-brand-600 animate-pulse">Analyzing answers...</p>
+                    <p id="completion-status-text" class="text-sm font-semibold text-brand-600">Analyzing answers and building your report…</p>
                 </div>
                 
                 <button id="btn-continue-report" onclick="window.app.goToStage(6)" class="hidden btn-primary w-full text-lg py-4 shadow-lg">View Full Report</button>
@@ -686,76 +911,99 @@
 
         <!-- PAGE 6: FULL REPORT -->
         <section id="view-report" class="view">
-            <div class="max-w-4xl mx-auto space-y-8">
-                <!-- Header -->
-                <div class="flex items-center justify-between pb-6 border-b border-slate-200">
-                    <div>
-                        <h1 class="text-3xl font-bold text-slate-900 mb-1">Interview Report</h1>
-                        <p class="text-slate-500 text-sm">Review your performance and action plan.</p>
+            <div class="max-w-4xl mx-auto space-y-6">
+                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-6 border-b border-slate-200">
+                    <div class="space-y-3">
+                        <div class="page-kicker"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Interview report</div>
+                        <h1 class="text-3xl font-black text-slate-900 tracking-tight">Your interview results</h1>
+                        <p id="rep-summary" class="text-sm text-slate-500 max-w-2xl leading-relaxed">A clear summary of how you performed, what matters most, and what to practice next.</p>
                     </div>
-                    <div class="flex gap-3">
+                    <div class="flex flex-col sm:flex-row gap-3">
                         <button onclick="window.app.goToStage(1)" class="btn-secondary text-sm hidden sm:block">Back to Dashboard</button>
-                        <button onclick="window.app.goToStage(7)" class="btn-primary text-sm shadow-sm flex items-center gap-2"><i data-lucide="dumbbell" class="w-4 h-4"></i> Practice Weakness</button>
+                        <button onclick="window.app.goToStage(7)" class="btn-primary text-sm shadow-sm flex items-center gap-2"><i data-lucide="dumbbell" class="w-4 h-4"></i> Practice next</button>
                     </div>
                 </div>
 
-                <!-- Top Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="card bg-brand-900 text-white border-none flex flex-col justify-center items-center text-center p-8 shadow-lg">
-                        <p class="text-brand-200 text-xs font-bold uppercase tracking-wider mb-2">Overall Score</p>
-                        <div class="flex items-baseline gap-1">
-                            <span id="rep-score" class="text-6xl font-black text-white">--</span>
-                            <span class="text-xl text-brand-400 font-bold mb-1">/10</span>
+                <div class="report-summary-card rounded-[1.35rem] p-6 md:p-7 text-white">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-6">
+                        <div class="report-score-ring shrink-0">
+                            <div class="text-center">
+                                <div class="flex items-baseline justify-center gap-1"><span id="rep-score" class="text-4xl font-black leading-none">--</span><span class="text-sm text-brand-300 font-bold">/10</span></div>
+                                <p class="text-[11px] text-brand-200 font-semibold mt-1">Overall score</p>
+                            </div>
                         </div>
-                        <span id="rep-score-label" class="mt-3 px-3 py-1 bg-brand-800 rounded-full text-sm font-medium border border-brand-700">Analyzing...</span>
-                    </div>
-                    
-                    <div class="card col-span-2 grid grid-cols-2 gap-6 p-8">
-                        <div>
-                            <h3 class="text-sm font-bold text-green-700 uppercase tracking-wider mb-4 flex items-center gap-2"><i data-lucide="arrow-up-circle" class="w-4 h-4"></i> Top Strengths</h3>
-                            <ul id="rep-strengths" class="space-y-3 text-sm text-slate-700 font-medium"></ul>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-orange-600 uppercase tracking-wider mb-4 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Needs Improvement</h3>
-                            <ul id="rep-weaknesses" class="space-y-3 text-sm text-slate-700 font-medium"></ul>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Plan & Best/Worst -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="card border-brand-200 bg-brand-50/50">
-                        <h3 class="text-base font-bold text-brand-900 mb-4 flex items-center gap-2"><i data-lucide="target" class="w-5 h-5 text-brand-600"></i> Your Action Plan</h3>
-                        <p class="text-xs text-brand-700 mb-4">Focus on these 3 tasks before your next interview:</p>
-                        <ul id="rep-action-plan" class="space-y-3 text-sm text-brand-900 font-medium"></ul>
-                    </div>
-                    
-                    <div class="space-y-6">
-                        <div class="card p-5 border-l-4 border-l-green-500">
-                            <h4 class="text-xs font-bold text-green-700 uppercase tracking-wider mb-2">Strongest Moment</h4>
-                            <p id="rep-best-answer" class="text-sm text-slate-700 italic">"..."</p>
-                        </div>
-                        <div class="card p-5 border-l-4 border-l-orange-400">
-                            <h4 class="text-xs font-bold text-orange-600 uppercase tracking-wider mb-2">Area to Rework</h4>
-                            <p id="rep-worst-answer" class="text-sm text-slate-600 italic mb-3">"..."</p>
-                            <div class="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                                <h5 class="text-[10px] font-bold text-orange-800 uppercase mb-1">How to answer this better (STAR):</h5>
-                                <p id="rep-star-example" class="text-xs text-orange-900 font-medium"></p>
+                        <div class="min-w-0 flex-1">
+                            <p id="rep-score-label" class="text-xl font-extrabold">Analyzing...</p>
+                            <p class="text-sm text-brand-100 mt-2 max-w-xl">Your score is based on the answers completed in this interview.</p>
+                            <div class="flex flex-wrap gap-x-5 gap-y-2 mt-4 text-xs font-semibold text-brand-200">
+                                <span class="flex items-center gap-1.5"><i data-lucide="briefcase-business" class="w-3.5 h-3.5"></i><span id="rep-type">Interview type</span></span>
+                                <span class="flex items-center gap-1.5"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i><span id="rep-date">Date</span></span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Question by Question Review -->
-                <div class="mt-12">
-                    <h3 class="text-xl font-bold text-slate-900 mb-6">Question-by-Question Review</h3>
-                    <div id="rep-q-review" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="card report-accent report-accent--strength p-5">
+                        <div class="flex items-center gap-2 mb-3"><i data-lucide="sparkles" class="w-4 h-4 text-emerald-600"></i><h3 class="text-base font-extrabold text-slate-900">Top Strength</h3></div>
+                        <ul id="rep-top-strength" class="report-mini-list text-slate-800"><li>Loading...</li></ul>
+                    </div>
+                    <div class="card report-accent report-accent--improve p-5">
+                        <div class="flex items-center gap-2 mb-3"><i data-lucide="target" class="w-4 h-4 text-orange-600"></i><h3 class="text-base font-extrabold text-slate-900">Main Improvement</h3></div>
+                        <ul id="rep-main-improvement" class="report-mini-list text-slate-800"><li>Loading...</li></ul>
+                    </div>
+                    <div class="card report-accent report-accent--practice p-5">
+                        <div class="flex items-center gap-2 mb-3"><i data-lucide="dumbbell" class="w-4 h-4 text-indigo-600"></i><h3 class="text-base font-extrabold text-slate-900">Next Practice</h3></div>
+                        <ul id="rep-next-practice" class="report-mini-list text-slate-800"><li>Loading...</li></ul>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between gap-4 mb-5 px-1">
+                        <div>
+                            <h3 class="section-heading">Question-by-question review</h3>
+                            <p class="section-copy mt-1">This is the main part of the report. Each question gets a score and short feedback.</p>
+                        </div>
+                    </div>
+                    <div id="rep-q-review" class="space-y-4">
                         <!-- Injected via JS -->
                     </div>
                 </div>
-                
-                <div class="flex justify-center pt-8">
-                     <button onclick="window.app.goToStage(1)" class="btn-secondary text-sm">Return to Dashboard</button>
+
+                <details class="card">
+                    <summary class="section-heading cursor-pointer list-none flex items-center justify-between gap-4">
+                        <span>More report details</span>
+                        <i data-lucide="chevron-down" class="report-chevron w-4 h-4 text-slate-400"></i>
+                    </summary>
+                    <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6 border-t border-slate-100 pt-5">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800 mb-3">Three next steps</h4>
+                            <ul id="rep-action-plan" class="space-y-3 text-sm text-slate-700 font-medium"></ul>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800 mb-3">Job requirement coverage</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700 mb-2">Demonstrated</p>
+                                    <ul id="rep-requirements-covered" class="space-y-2 text-sm text-slate-600"></ul>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-amber-700 mb-2">Needs more practice</p>
+                                    <ul id="rep-requirements-practice" class="space-y-2 text-sm text-slate-600"></ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-4 lg:col-span-2">
+                            <div>
+                                <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">Question notes</h4>
+                                <div id="rep-skipped-questions" class="space-y-3 text-sm text-slate-600"></div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="flex justify-center pt-2">
+                    <button onclick="window.app.goToStage(1)" class="btn-secondary text-sm">Return to Dashboard</button>
                 </div>
             </div>
         </section>
@@ -782,7 +1030,7 @@
                     <!-- Task Card -->
                     <div class="stat-card p-8 border-l-8 border-l-orange-400">
                         <div class="flex items-center gap-3 mb-4">
-                            <span class="badge-premium bg-orange-50 text-orange-600 border-orange-100">Growth Area</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-orange-600">Growth area</span>
                             <span id="practice-weakness-name" class="text-sm font-black text-brand-900 uppercase">Communication</span>
                         </div>
                         <h2 id="practice-question" class="text-xl font-black text-brand-900 leading-tight mb-4">How do you handle feedback from a manager that you disagree with?</h2>
@@ -861,13 +1109,4 @@
         });
     </script>
 </body>
-</html>p.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        });
-    </script>
-</body>
-</html>ml>
+</html>

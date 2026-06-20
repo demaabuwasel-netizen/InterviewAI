@@ -2,6 +2,97 @@ const STAGE_HASHES = ['', '#dashboard', '#profile', '#setup', '#interview', '#co
 const HASH_TO_STAGE = Object.fromEntries(STAGE_HASHES.map((h, i) => [h, i]).filter(([h]) => h));
 
 window.app = {
+    async postJSON(url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+        return data;
+    },
+
+    async requestInterviewQuestion() {
+        const interview = this.state.interview;
+        return this.postJSON('/api/interview-next-question', {
+            student_profile: this.state.user,
+            job_description: this.state.job.description,
+            interview_type: this.state.interviewMode,
+            interview_length: interview.length,
+            interviewer_style: this.state.interviewerMood,
+            previous_question: interview.previousQuestion,
+            latest_student_answer: interview.latestAnswer,
+            full_transcript: interview.transcript,
+            main_questions_asked: interview.mainQuestionsAsked,
+            follow_ups_asked: interview.followUpsAsked,
+            total_questions_asked: interview.questions.length,
+            current_stage: interview.currentStage,
+            asked_questions: interview.askedQuestions,
+            covered_job_requirements: interview.coveredJobRequirements,
+            skipped_questions: interview.skippedQuestions
+        });
+    },
+
+    getInterviewConfig(length = this.state.wizard.length || 'short') {
+        return length === 'full'
+            ? { length: 'full', label: 'Full practice', mainTarget: 14, maxQuestions: 18, maxFollowUps: 4 }
+            : { length: 'short', label: 'Short interview', mainTarget: 6, maxQuestions: 7, maxFollowUps: 1 };
+    },
+
+    interviewStageLabel(stage) {
+        return ({ opening: 'Opening', role_fit: 'Role fit', experience: 'Experience & CV', behavioral: 'Behavioral', technical: 'Job-specific', closing: 'Closing' })[stage] || 'Interview';
+    },
+
+    appendGeneratedQuestion(result) {
+        const interview = this.state.interview;
+        const question = String(result.next_question || '').trim();
+        const meta = {
+            stage: result.interview_stage || interview.currentStage || 'opening',
+            type: result.question_type || 'role_fit',
+            topic: result.topic || 'Role fit',
+            reason: result.reason || 'This question checks your fit for the role.',
+            jobRequirement: result.job_requirement || '',
+            isFollowUp: Boolean(result.is_follow_up)
+        };
+        interview.questions.push(question);
+        interview.questionMeta.push(meta);
+        interview.transcript.push({ role: 'assistant', content: question });
+        interview.askedQuestions.push(question);
+        interview.currentStage = meta.stage;
+        interview.currentQuestionType = meta.type;
+        interview.currentTopic = meta.topic;
+        interview.currentQuestionReason = meta.reason;
+        interview.currentJobRequirement = meta.jobRequirement;
+        if (meta.isFollowUp) interview.followUpsAsked++;
+        else interview.mainQuestionsAsked++;
+        if (meta.jobRequirement && !interview.coveredJobRequirements.includes(meta.jobRequirement)) {
+            interview.coveredJobRequirements.push(meta.jobRequirement);
+        }
+        return question;
+    },
+
+    shouldCompleteInterview() {
+        const interview = this.state.interview;
+        const currentMeta = interview.questionMeta[interview.currentQuestionIndex];
+        return interview.responses.length >= interview.maxQuestions || currentMeta?.stage === 'closing';
+    },
+
+    localFollowUpQuestion() {
+        const answer = this.state.interview.latestAnswer || '';
+        if (answer.includes('skipped')) {
+            return `Let's try a different angle. What is one project or experience that best demonstrates your fit for this role?`;
+        }
+        const detail = answer.split(/(?<=[.!?])\s+/)[0].slice(0, 120);
+        return `You mentioned "${detail}". What was your specific contribution, and what measurable result did it produce?`;
+    },
+
+    escapeHTML(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        })[character]);
+    },
+
     // --- AI Intelligence Core (Ollama Integration) ---
     async callModelAPI(promptOrMessages, systemInstruction = "", isJson = false) {
         // Handle native message array or fallback to single string prompt
@@ -121,12 +212,12 @@ window.app = {
         // 2. Mock Report (Priority)
         if (p.includes('career coach') && p.includes('transcript')) {
             return JSON.stringify({
-                "score": 8,
-                "strengths": ["Clear communication", "Practical examples", "Good technical foundation"],
-                "improvements": ["Be more specific about metrics", "Structure the STAR method better", "elaborate on trade-offs"],
-                "bestAnswer": "Your explanation of the React state management was very clear.",
-                "weakestAnswer": "The answer about teamwork could have used a more concrete example.",
-                "starExample": "In my React project, users were losing data on refresh. I implemented local storage sync. This reduced data loss complaints by 90%."
+                "score": 5.4,
+                "strengths": ["Some answers stayed on topic", "A few answers showed useful detail", "There is a starting base to build on"],
+                "improvements": ["Add a concrete example", "Include results or metrics", "Use clearer structure in weak answers"],
+                "bestAnswer": "One answer explained the idea clearly, even if it could have gone deeper.",
+                "weakestAnswer": "The weakest answer stayed too brief and needed a real example.",
+                "starExample": "A stronger answer would briefly describe the situation, the action you personally took, and the outcome or metric."
             });
         }
 
@@ -142,12 +233,12 @@ window.app = {
         // 4. Mock Report (Fallback)
         if (p.includes('report')) {
             return JSON.stringify({
-                "score": 8,
-                "strengths": ["Clear communication", "Practical examples", "Good technical foundation"],
-                "improvements": ["Be more specific about metrics", "Structure the STAR method better", "elaborate on trade-offs"],
-                "bestAnswer": "Your explanation of the React state management was very clear.",
-                "weakestAnswer": "The answer about teamwork could have used a more concrete example.",
-                "starExample": "In my React project, users were losing data on refresh. I implemented local storage sync. This reduced data loss complaints by 90%."
+                "score": 5.4,
+                "strengths": ["Some answers stayed on topic", "A few answers showed useful detail", "There is a starting base to build on"],
+                "improvements": ["Add a concrete example", "Include results or metrics", "Use clearer structure in weak answers"],
+                "bestAnswer": "One answer explained the idea clearly, even if it could have gone deeper.",
+                "weakestAnswer": "The weakest answer stayed too brief and needed a real example.",
+                "starExample": "A stronger answer would briefly describe the situation, the action you personally took, and the outcome or metric."
             });
         }
 
@@ -172,14 +263,27 @@ window.app = {
         isGuest: false,
         isEditingProfile: false,
         currentUser: null,
-        wizard: { step: 1, goal: 'specific', jobDesc: '', style: 'hr', mood: 'professional', method: 'text' },
-        user: { name: '', email: '', field: 'Software Engineering', skills: '', courses: '', experience: '', linkedin: '' },
+        wizard: { step: 1, goal: 'specific', jobDesc: '', style: 'hr', mood: 'professional', length: 'short', method: 'text' },
+        user: {
+            name: '', email: '', field: 'Software Engineering', targetRole: '', location: '', phone: '', summary: '',
+            skills: '', courses: '', projects: '', experience: '', linkedin: '', certifications: '', languages: '', cvData: null
+        },
         job: { description: '', link: '' },
         analysis: { matchScore: 0, difficulty: 'Moderate', strengths: [], gaps: [], topics: [] },
         interview: {
+            length: 'short',
+            mainTarget: 6,
+            maxQuestions: 7,
+            maxFollowUps: 1,
+            mainQuestionsAsked: 0,
+            followUpsAsked: 0,
             currentQuestionIndex: 0,
             questions: [],
+            questionMeta: [],
             responses: [],
+            skippedQuestions: [],
+            clarificationRequests: [],
+            coveredJobRequirements: [],
             startTime: null,
             isListening: false,
             awaitingFollowUp: false,
@@ -240,6 +344,7 @@ window.app = {
             job: document.getElementById('job-form')
         };
         this.populateFocusAreas();
+        this.renderProfileEducation([]);
     },
 
     bindEvents() {
@@ -363,19 +468,6 @@ window.app = {
         }
     },
 
-    continueAsGuest() {
-        this.createGuestSession();
-    },
-
-    createGuestSession() {
-        this.state.isGuest = true;
-        this.state.user = { name: 'Guest User', email: 'guest@prepwise.ai', field: 'Software Engineering', skills: 'React, Node', courses: '', experience: '', linkedin: '' };
-        this.state.currentUser = { email: this.state.user.email, profile: this.state.user, sessions: [], isGuest: true };
-        localStorage.setItem('prepwise_session_v3', JSON.stringify(this.state.currentUser));
-        this.updateUserUI();
-        this.showDashboard();
-    },
-
     initRouting() {
         const hash = window.location.hash;
         const stage = HASH_TO_STAGE[hash];
@@ -436,24 +528,166 @@ window.app = {
         this.saveProfile();
     },
 
-    saveProfile() {
+    addEducationEntry(education = {}) {
+        const container = document.getElementById('prof-education-list');
+        if (!container) return;
+        const esc = (value) => this.escapeHTML(value || '');
+        const entry = document.createElement('div');
+        entry.className = 'profile-education-item border border-slate-200 rounded-xl p-4 bg-slate-50/60 space-y-4';
+        entry.innerHTML = `
+            <div class="flex items-center justify-between">
+                <p class="education-entry-title text-sm font-bold text-slate-800">Education</p>
+                <button type="button" onclick="window.app.removeEducationEntry(this)" class="text-xs font-semibold text-slate-400 hover:text-red-600 flex items-center gap-1" aria-label="Remove education">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Remove
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Degree or program</label><input data-key="degree" value="${esc(education.degree)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="BSc, diploma, bootcamp..."></div>
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Institution</label><input data-key="institution" value="${esc(education.institution)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="University or school"></div>
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Field of study</label><input data-key="field" value="${esc(education.field)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Computer Science, Finance..."></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Start</label><input data-key="startDate" value="${esc(education.startDate)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="2021"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">End</label><input data-key="endDate" value="${esc(education.endDate)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="2025 or Present"></div>
+                </div>
+            </div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Details or achievements</label><textarea data-key="details" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm min-h-[65px]" placeholder="Honors, specialization, thesis, relevant achievements...">${esc(education.details)}</textarea></div>
+        `;
+        container.appendChild(entry);
+        this.updateEducationEntryTitles();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    removeEducationEntry(button) {
+        const entries = document.querySelectorAll('.profile-education-item');
+        if (entries.length <= 1) {
+            entries[0]?.querySelectorAll('input, textarea').forEach((field) => { field.value = ''; });
+            return;
+        }
+        button.closest('.profile-education-item')?.remove();
+        this.updateEducationEntryTitles();
+    },
+
+    updateEducationEntryTitles() {
+        document.querySelectorAll('.profile-education-item .education-entry-title').forEach((title, index) => {
+            title.textContent = `Education ${index + 1}`;
+        });
+    },
+
+    renderProfileEducation(items) {
+        const container = document.getElementById('prof-education-list');
+        if (!container) return;
+        container.innerHTML = '';
+        const educationItems = Array.isArray(items) && items.length ? items : [{}];
+        educationItems.forEach((item) => this.addEducationEntry(item));
+        this.renderProfileSummary();
+    },
+
+    collectProfileEducation() {
+        return Array.from(document.querySelectorAll('.profile-education-item')).map((entry) => {
+            const item = { degree: '', institution: '', field: '', startDate: '', endDate: '', details: '' };
+            entry.querySelectorAll('[data-key]').forEach((field) => { item[field.dataset.key] = field.value.trim(); });
+            return item;
+        }).filter((item) => Object.values(item).some(Boolean));
+    },
+
+    getProfileCompletionSummary() {
+        const cvData = this.normalizeCVData(this.state.user.cvData || {});
+        const checks = [
+            { label: 'Name', present: Boolean(this.state.user.name) },
+            { label: 'Target role', present: Boolean(this.state.user.targetRole || cvData.targetRole) },
+            { label: 'Skills', present: Boolean(this.state.user.skills || Object.values(cvData.skills || {}).some((items) => items.length)) },
+            { label: 'Education', present: Boolean(this.collectProfileEducation().length || cvData.education.length || this.state.user.courses) },
+            { label: 'Projects or experience', present: Boolean(this.state.user.projects || this.state.user.experience || cvData.experience.length || cvData.projects.length) }
+        ];
+        const total = checks.length;
+        const complete = checks.filter((item) => item.present).length;
+        const pct = Math.round((complete / total) * 100);
+        const missing = checks.filter((item) => !item.present).map((item) => item.label);
+        return {
+            pct,
+            missing,
+            note: pct >= 80
+                ? 'Your profile is strong enough for specific interview questions.'
+                : pct >= 60
+                    ? 'You have a solid base. Add a bit more detail to improve the next interview.'
+                    : 'Add a few core details so the AI can ask more relevant questions.'
+        };
+    },
+
+    renderProfileSummary() {
+        const summary = this.getProfileCompletionSummary();
+        const headerName = document.getElementById('prof-header-name');
+        const headerRole = document.getElementById('prof-header-role');
+        const pctEl = document.getElementById('prof-strength-pct');
+        const barEl = document.getElementById('prof-strength-bar');
+        const noteEl = document.getElementById('prof-strength-note');
+        const missingEl = document.getElementById('prof-missing');
+        if (headerName) headerName.textContent = this.state.user.name || 'Your profile';
+        if (headerRole) headerRole.textContent = this.state.user.targetRole || this.state.user.field || 'Target role / field';
+        if (pctEl) pctEl.textContent = `${summary.pct}%`;
+        if (barEl) barEl.style.width = `${summary.pct}%`;
+        if (noteEl) noteEl.textContent = summary.note;
+        if (missingEl) {
+            missingEl.innerHTML = summary.missing.length
+                ? `<span class="text-xs text-slate-400 mr-1">Helpful to add:</span>${summary.missing.map((item) => `<span class="profile-missing-item">${this.escapeHTML(item)}</span>`).join('')}`
+                : '<span class="text-xs font-semibold text-emerald-600">Profile looks complete.</span>';
+        }
+    },
+
+    focusProfileField(id) {
+        const field = document.getElementById(id);
+        if (!field) return;
+        field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.setTimeout(() => field.focus(), 250);
+    },
+
+    saveProfile(continueToSetup = false) {
         const nameEl = document.getElementById('prof-name');
         const fieldEl = document.getElementById('prof-field');
         const skillsEl = document.getElementById('prof-skills');
         const coursesEl = document.getElementById('prof-courses');
+        const projectsEl = document.getElementById('prof-projects');
         const experienceEl = document.getElementById('prof-experience');
         const linkedinEl = document.getElementById('prof-linkedin');
+        const targetRoleEl = document.getElementById('prof-target-role');
+        const locationEl = document.getElementById('prof-location');
+        const phoneEl = document.getElementById('prof-phone');
+        const summaryEl = document.getElementById('prof-summary');
+        const certificationsEl = document.getElementById('prof-certifications');
+        const languagesEl = document.getElementById('prof-languages');
         
         this.state.user.name = nameEl ? nameEl.value.trim() : '';
         this.state.user.field = fieldEl ? fieldEl.value.trim() : 'Software Engineering';
         this.state.user.skills = skillsEl ? skillsEl.value.trim() : '';
         this.state.user.courses = coursesEl ? coursesEl.value.trim() : '';
+        this.state.user.projects = projectsEl ? projectsEl.value.trim() : '';
         this.state.user.experience = experienceEl ? experienceEl.value.trim() : '';
         this.state.user.linkedin = linkedinEl ? linkedinEl.value.trim() : '';
+        this.state.user.targetRole = targetRoleEl ? targetRoleEl.value.trim() : '';
+        this.state.user.location = locationEl ? locationEl.value.trim() : '';
+        this.state.user.phone = phoneEl ? phoneEl.value.trim() : '';
+        this.state.user.summary = summaryEl ? summaryEl.value.trim() : '';
+        this.state.user.certifications = certificationsEl ? certificationsEl.value.trim() : '';
+        this.state.user.languages = languagesEl ? languagesEl.value.trim() : '';
+
+        const cvData = this.normalizeCVData(this.state.user.cvData || {});
+        cvData.targetRole = this.state.user.targetRole;
+        cvData.location = this.state.user.location;
+        cvData.phone = this.state.user.phone;
+        cvData.summary = this.state.user.summary;
+        cvData.education = this.collectProfileEducation();
+        cvData.relevantCourses = this.splitCVList(this.state.user.courses);
+        const structuredSkillNames = new Set(Object.values(cvData.skills).flat().map((skill) => skill.toLowerCase()));
+        const additionalSkills = this.splitCVList(this.state.user.skills).filter((skill) => !structuredSkillNames.has(skill.toLowerCase()));
+        cvData.skills.other = [...cvData.skills.other, ...additionalSkills];
+        cvData.certifications = this.splitCVList(this.state.user.certifications);
+        cvData.languages = this.splitCVList(this.state.user.languages);
+        this.state.user.cvData = cvData;
         
         this.saveUserData();
         this.updateUserUI();
-        this.showDashboard();
+        if (continueToSetup) this.goToStage(3);
+        else this.showDashboard();
     },
 
     openEditProfile() {
@@ -461,15 +695,32 @@ window.app = {
         const fieldEl = document.getElementById('prof-field');
         const skillsEl = document.getElementById('prof-skills');
         const coursesEl = document.getElementById('prof-courses');
+        const projectsEl = document.getElementById('prof-projects');
         const experienceEl = document.getElementById('prof-experience');
         const linkedinEl = document.getElementById('prof-linkedin');
+        const cvData = this.normalizeCVData(this.state.user.cvData || {});
+        const extraFields = {
+            'prof-target-role': this.state.user.targetRole || cvData.targetRole,
+            'prof-location': this.state.user.location || cvData.location,
+            'prof-phone': this.state.user.phone || cvData.phone,
+            'prof-summary': this.state.user.summary || cvData.summary,
+            'prof-certifications': this.state.user.certifications || cvData.certifications.join('\n'),
+            'prof-languages': this.state.user.languages || cvData.languages.join('\n')
+        };
 
         if (nameEl) nameEl.value = this.state.user.name || '';
         if (fieldEl) fieldEl.value = this.state.user.field || '';
         if (skillsEl) skillsEl.value = this.state.user.skills || '';
         if (coursesEl) coursesEl.value = this.state.user.courses || '';
+        if (projectsEl) projectsEl.value = this.state.user.projects || cvData.projects.map((item) => [item.name, item.role, item.description, item.technologies?.join(', '), item.impact].filter(Boolean).join(' — ')).join('\n');
         if (experienceEl) experienceEl.value = this.state.user.experience || '';
         if (linkedinEl) linkedinEl.value = this.state.user.linkedin || '';
+        Object.entries(extraFields).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.value = value || '';
+        });
+        this.renderProfileEducation(cvData.education);
+        this.renderProfileSummary();
         
         this.goToStage(2);
     },
@@ -510,6 +761,64 @@ window.app = {
         }
     },
 
+    isDevelopmentMode() {
+        return ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
+    },
+
+    debugCV(label, value) {
+        if (this.isDevelopmentMode()) console.debug(`[CV] ${label}`, value);
+    },
+
+    setCVStatus(message, isError = false) {
+        const status = document.getElementById('cv-import-status');
+        if (!status) return;
+        status.textContent = message;
+        status.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-slate-600');
+        status.classList.add(isError ? 'text-red-600' : 'text-slate-600');
+        document.getElementById('cv-fallback-actions')?.classList.toggle('hidden', !isError);
+    },
+
+    cleanCVText(rawText, pages = []) {
+        const sectionPattern = /^(education|experience|work experience|employment|projects?|skills?|certifications?|languages?|coursework|relevant courses|summary|profile|השכלה|ניסיון|פרויקטים|כישורים|مهارات|التعليم|الخبرة|المشاريع)$/iu;
+        const repeatedMargins = new Set();
+        if (pages.length > 1) {
+            const counts = new Map();
+            pages.forEach((page) => {
+                const lines = page.split('\n').map((line) => line.trim()).filter(Boolean);
+                [...lines.slice(0, 2), ...lines.slice(-2)].forEach((line) => {
+                    const key = line.replace(/\s+/g, ' ').toLowerCase();
+                    if (key.length > 2 && key.length < 100) counts.set(key, (counts.get(key) || 0) + 1);
+                });
+            });
+            counts.forEach((count, line) => {
+                if (count > 1 && !sectionPattern.test(line)) repeatedMargins.add(line);
+            });
+        }
+
+        const seenRepeatedMargins = new Set();
+        const cleanedLines = String(rawText || '')
+            .normalize('NFKC')
+            .replace(/\r/g, '\n')
+            .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+            .replace(/[•●▪◦‣]/g, '- ')
+            .split('\n')
+            .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+            .filter((line) => line && !/^(?:page\s*)?\d+(?:\s*(?:of|\/|מתוך|من)\s*\d+)?$/iu.test(line))
+            .filter((line) => {
+                const key = line.toLowerCase();
+                if (!repeatedMargins.has(key)) return true;
+                if (seenRepeatedMargins.has(key)) return false;
+                seenRepeatedMargins.add(key);
+                return true;
+            });
+
+        return cleanedLines
+            .filter((line, index) => index === 0 || line !== cleanedLines[index - 1])
+            .join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    },
+
     async handleCVUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -521,146 +830,155 @@ window.app = {
             nameEl.textContent = file.name;
             nameEl.classList.remove('hidden');
         }
-        if (parseBtn) parseBtn.disabled = false;
+        if (file.size > 5 * 1024 * 1024) {
+            this.setCVStatus('Please choose a PDF smaller than 5MB.', true);
+            if (parseBtn) parseBtn.disabled = true;
+            return;
+        }
+        if (parseBtn) parseBtn.disabled = true;
+        this.setCVStatus('Reading PDF locally...');
 
         const reader = new FileReader();
         reader.onload = async (e) => {
             const typedarray = new Uint8Array(e.target.result);
             try {
                 const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                let fullText = "";
+                const pages = [];
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(" ");
-                    fullText += pageText + "\n";
+                    const pageText = textContent.items.map((item) => `${item.str}${item.hasEOL ? '\n' : ' '}`).join('');
+                    pages.push(pageText);
                 }
-                this._pendingCVText = fullText;
-                console.log("PDF text extracted successfully.");
+                const rawText = pages.join('\n\n');
+                this._pendingCVPages = pages;
+                this._pendingCVText = this.cleanCVText(rawText, pages);
+                this.debugCV('raw extracted PDF text length', rawText.length);
+                this.debugCV('cleaned text preview', this._pendingCVText.slice(0, 600));
+                if (this._pendingCVText.length < 40) throw new Error('The PDF contains too little selectable text.');
+                if (parseBtn) parseBtn.disabled = false;
+                this.setCVStatus('PDF ready. Click “Parse PDF” to review the extracted information.');
             } catch (err) {
                 console.error("Error parsing PDF:", err);
-                alert("Failed to parse PDF. Please try pasting the text instead.");
+                this._pendingCVText = '';
+                if (parseBtn) parseBtn.disabled = true;
+                this.setCVStatus('We could not read this PDF. Paste the CV text below or fill the profile manually.', true);
             }
         };
         reader.readAsArrayBuffer(file);
     },
 
-    autofillFromCV() {
-        const cvText = this._pendingCVText || (document.getElementById('cv-text-input') || {}).value || '';
-        if (!cvText.trim()) return;
+    normalizeCVData(value) {
+        const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        const string = (item, max = 4000) => typeof item === 'string' ? item.trim().slice(0, max) : '';
+        const list = (items, max = 50) => Array.isArray(items)
+            ? items.slice(0, max).map((item) => string(item, 500)).filter(Boolean)
+            : [];
+        const objects = (items, keys, arrayKeys = []) => Array.isArray(items)
+            ? items.slice(0, 20).filter((item) => item && typeof item === 'object' && !Array.isArray(item)).map((item) => {
+                const normalized = {};
+                keys.forEach((key) => { normalized[key] = arrayKeys.includes(key) ? list(item[key], 30) : string(item[key]); });
+                return normalized;
+            })
+            : [];
+        const confidence = source.confidence && typeof source.confidence === 'object' ? source.confidence : {};
+        const confidenceValue = (key) => ['high', 'medium', 'low'].includes(confidence[key]) ? confidence[key] : 'low';
+        const skills = source.skills && typeof source.skills === 'object' && !Array.isArray(source.skills) ? source.skills : {};
 
-        const parsed = this.parseCVText(cvText);
+        return {
+            name: string(source.name, 200), email: string(source.email, 320), phone: string(source.phone, 100),
+            location: string(source.location, 300), targetRole: string(source.targetRole, 300), summary: string(source.summary),
+            education: objects(source.education, ['degree', 'institution', 'field', 'startDate', 'endDate', 'details']),
+            relevantCourses: list(source.relevantCourses),
+            skills: {
+                programmingLanguages: list(skills.programmingLanguages), frameworks: list(skills.frameworks),
+                tools: list(skills.tools), databases: list(skills.databases), softSkills: list(skills.softSkills), other: list(skills.other)
+            },
+            experience: objects(source.experience, ['title', 'organization', 'startDate', 'endDate', 'description', 'skillsUsed'], ['skillsUsed']),
+            projects: objects(source.projects, ['name', 'description', 'technologies', 'role', 'impact'], ['technologies']),
+            certifications: list(source.certifications), languages: list(source.languages), missingFields: list(source.missingFields),
+            confidence: {
+                name: confidenceValue('name'), education: confidenceValue('education'), skills: confidenceValue('skills'),
+                experience: confidenceValue('experience'), projects: confidenceValue('projects')
+            }
+        };
+    },
 
-        // Store extracted data for review
-        this._cvExtracted = parsed._extracted || {};
-        this._cvRawParsed = parsed;
+    async autofillFromCV() {
+        const pastePanel = document.getElementById('cv-paste-panel');
+        const pastedText = document.getElementById('cv-text-input')?.value || '';
+        const sourceText = pastePanel && !pastePanel.classList.contains('hidden') && pastedText.trim()
+            ? pastedText
+            : this._pendingCVText || pastedText;
+        const cleanedText = this.cleanCVText(sourceText, sourceText === this._pendingCVText ? this._pendingCVPages || [] : []);
+        if (cleanedText.length < 40) {
+            this.setCVStatus('Please upload a readable PDF or paste more CV text before parsing.', true);
+            return;
+        }
 
-        // Show review dialog with extracted data
-        this.showCVReviewModal(parsed);
+        this.debugCV('cleaned text preview', cleanedText.slice(0, 600));
+        this.setCVStatus('Analyzing your CV...');
+        try {
+            const result = await this.postJSON('/api/parse-cv', { cv_text: cleanedText });
+            const parsed = this.normalizeCVData(result);
+            this._cvRawParsed = parsed;
+            this.debugCV('parsed JSON result', parsed);
+            this.showCVReviewModal(parsed);
+            this.setCVStatus('CV parsed. Review the information before saving.');
+        } catch (error) {
+            console.error('CV parsing failed:', error);
+            const input = document.getElementById('cv-text-input');
+            if (input && !input.value.trim()) input.value = cleanedText;
+            this.switchCVTab('paste');
+            this.setCVStatus('We could not analyze this CV. You can retry with pasted text or fill the profile manually.', true);
+        }
     },
 
     showCVReviewModal(parsed) {
-        // Create modal HTML for reviewing extracted CV data
+        this.closeCVReviewModal();
+        const esc = (value) => this.escapeHTML(value);
+        const input = (id, label, value, placeholder = '') => `<div><label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">${label}</label><input id="${id}" value="${esc(value)}" placeholder="${esc(placeholder)}" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none"></div>`;
+        const textarea = (id, label, value, placeholder = '') => `<div><label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">${label}</label><textarea id="${id}" placeholder="${esc(placeholder)}" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none min-h-[80px]">${esc(value)}</textarea></div>`;
+        const rowInput = (key, label, value) => `<div><label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">${label}</label><input data-key="${key}" value="${esc(value)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"></div>`;
+        const listRows = (type, items, renderer) => items.length
+            ? items.map((item, index) => `<div class="cv-${type}-item p-4 border border-slate-200 rounded-xl space-y-3"><p class="text-xs font-black text-brand-600 uppercase">${type} ${index + 1}</p>${renderer(item)}</div>`).join('')
+            : `<p class="text-xs text-slate-400">None found. Choose “Edit manually” to add this information directly to your profile.</p>`;
+        const educationRows = listRows('education', parsed.education, (item) => `<div class="grid md:grid-cols-2 gap-3">${rowInput('degree', 'Degree', item.degree)}${rowInput('institution', 'Institution', item.institution)}${rowInput('field', 'Field', item.field)}${rowInput('startDate', 'Start date', item.startDate)}${rowInput('endDate', 'End date', item.endDate)}</div>${textarea('', 'Details', item.details).replace('id=""', 'data-key="details"')}`);
+        const experienceRows = listRows('experience', parsed.experience, (item) => `<div class="grid md:grid-cols-2 gap-3">${rowInput('title', 'Title', item.title)}${rowInput('organization', 'Organization', item.organization)}${rowInput('startDate', 'Start date', item.startDate)}${rowInput('endDate', 'End date', item.endDate)}</div>${textarea('', 'Description', item.description).replace('id=""', 'data-key="description"')}${textarea('', 'Skills used (comma separated)', item.skillsUsed.join(', ')).replace('id=""', 'data-key="skillsUsed"')}`);
+        const projectRows = listRows('project', parsed.projects, (item) => `${input('', 'Project name', item.name).replace('id=""', 'data-key="name"')}${textarea('', 'Description', item.description).replace('id=""', 'data-key="description"')}${textarea('', 'Technologies (comma separated)', item.technologies.join(', ')).replace('id=""', 'data-key="technologies"')}${input('', 'Your role', item.role).replace('id=""', 'data-key="role"')}${input('', 'Impact', item.impact).replace('id=""', 'data-key="impact"')}`);
+        const missing = parsed.missingFields.length ? parsed.missingFields.map((field) => `<span class="px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-xs">${esc(field)}</span>`).join('') : '<span class="text-xs text-green-700">No important missing fields detected.</span>';
+
         const modal = document.createElement('div');
         modal.id = 'cv-review-modal';
         modal.className = 'fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4';
         modal.innerHTML = `
-            <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div class="sticky top-0 bg-gradient-to-r from-brand-500 to-brand-600 p-6 text-white">
-                    <h2 class="text-2xl font-black">Review Extracted Information</h2>
-                    <p class="text-sm opacity-90 mt-1">Check that the information was extracted correctly. Edit if needed.</p>
+                    <h2 class="text-2xl font-black">We found this information from your CV</h2>
+                    <p class="text-sm opacity-90 mt-1">Review and edit it before anything is saved to your profile.</p>
                 </div>
-
                 <div class="p-6 space-y-5">
-                    <!-- Name -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Full Name</label>
-                        <input type="text" id="cv-review-name" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none" value="${parsed.name || ''}" placeholder="Your full name">
-                    </div>
-
-                    <!-- Field -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Field of Work</label>
-                        <select id="cv-review-field" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none">
-                            <option>${parsed.field || 'Select field'}</option>
-                        </select>
-                    </div>
-
-                    <!-- LinkedIn -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">LinkedIn URL</label>
-                        <input type="url" id="cv-review-linkedin" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none" value="${parsed.linkedin || ''}" placeholder="https://linkedin.com/in/yourprofile">
-                    </div>
-
-                    <!-- Skills -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                            Skills (${(parsed.skills || '').split(', ').filter(Boolean).length} found)
-                        </label>
-                        <textarea id="cv-review-skills" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none resize-none h-24" placeholder="Skills, separated by commas">${parsed.skills || ''}</textarea>
-                        <p class="text-[9px] text-slate-400 mt-1">Separate skills with commas. Edit or remove any that were incorrectly extracted.</p>
-                    </div>
-
-                    <!-- Education -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                            Education (${this._cvExtracted.education?.length || 0} found)
-                        </label>
-                        <textarea id="cv-review-education" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none resize-none h-24" placeholder="Your degrees and educational background">${(this._cvExtracted.education || []).join('\n') || ''}</textarea>
-                    </div>
-
-                    <!-- Experience -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Experience</label>
-                        <textarea id="cv-review-experience" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none resize-none h-32" placeholder="Your work experience and professional background">${parsed.experience || ''}</textarea>
-                    </div>
-
-                    <!-- Courses -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                            Relevant Courses (${(parsed.courses || '').split(', ').filter(Boolean).length} found)
-                        </label>
-                        <textarea id="cv-review-courses" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none resize-none h-20" placeholder="Relevant courses, separated by commas">${parsed.courses || ''}</textarea>
-                    </div>
-
-                    <!-- Projects -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                            Projects (${this._cvExtracted.projects?.length || 0} found)
-                        </label>
-                        <textarea id="cv-review-projects" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none resize-none h-24" placeholder="Key projects you've worked on">${(this._cvExtracted.projects || []).join('\n') || ''}</textarea>
-                    </div>
-
-                    <!-- Certifications -->
-                    <div>
-                        <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                            Certifications (${this._cvExtracted.certifications?.length || 0} found)
-                        </label>
-                        <textarea id="cv-review-certifications" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:border-brand-500 focus:outline-none resize-none h-20" placeholder="Professional certifications and awards">${(this._cvExtracted.certifications || []).join('\n') || ''}</textarea>
-                    </div>
+                    <div class="p-4 bg-amber-50 border border-amber-100 rounded-xl"><p class="text-xs font-black text-amber-900 uppercase mb-2">Missing fields</p><div class="flex flex-wrap gap-2">${missing}</div></div>
+                    <div class="grid md:grid-cols-2 gap-4">${input('cv-review-name', `Full name · ${parsed.confidence.name} confidence`, parsed.name)}${input('cv-review-email', 'Email', parsed.email)}${input('cv-review-phone', 'Phone', parsed.phone)}${input('cv-review-location', 'Location', parsed.location)}${input('cv-review-role', 'Target role', parsed.targetRole)}</div>
+                    ${textarea('cv-review-summary', 'Summary', parsed.summary)}
+                    <section class="space-y-3"><h3 class="font-black text-brand-900">Education · ${esc(parsed.confidence.education)} confidence</h3>${educationRows}</section>
+                    ${textarea('cv-review-courses', 'Relevant courses (comma separated)', parsed.relevantCourses.join(', '))}
+                    <section class="space-y-3"><h3 class="font-black text-brand-900">Skills · ${esc(parsed.confidence.skills)} confidence</h3><div class="grid md:grid-cols-2 gap-4">${textarea('cv-skills-programmingLanguages', 'Programming languages', parsed.skills.programmingLanguages.join(', '))}${textarea('cv-skills-frameworks', 'Frameworks', parsed.skills.frameworks.join(', '))}${textarea('cv-skills-tools', 'Tools', parsed.skills.tools.join(', '))}${textarea('cv-skills-databases', 'Databases', parsed.skills.databases.join(', '))}${textarea('cv-skills-softSkills', 'Soft skills', parsed.skills.softSkills.join(', '))}${textarea('cv-skills-other', 'Other', parsed.skills.other.join(', '))}</div></section>
+                    <section class="space-y-3"><h3 class="font-black text-brand-900">Experience · ${esc(parsed.confidence.experience)} confidence</h3>${experienceRows}</section>
+                    <section class="space-y-3"><h3 class="font-black text-brand-900">Projects · ${esc(parsed.confidence.projects)} confidence</h3>${projectRows}</section>
+                    <div class="grid md:grid-cols-2 gap-4">${textarea('cv-review-certifications', 'Certifications (one per line)', parsed.certifications.join('\n'))}${textarea('cv-review-languages', 'Languages (one per line)', parsed.languages.join('\n'))}</div>
                 </div>
-
                 <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-6 flex gap-3">
-                    <button onclick="window.app.closeCVReviewModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-colors">
-                        Cancel
+                    <button onclick="window.app.editCVManually()" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-colors">
+                        Edit manually
                     </button>
                     <button onclick="window.app.applyCVExtracted()" class="flex-1 btn-gradient text-white font-bold rounded-lg transition-all">
-                        Apply to Profile
+                        Save to profile
                     </button>
                 </div>
             </div>
         `;
-
         document.body.appendChild(modal);
-
-        // Populate field select with options
-        this.populateFocusAreas();
-        const fieldSelect = document.getElementById('cv-review-field');
-        if (fieldSelect) {
-            const areas = Array.from(document.getElementById('field-select')?.options || []).map(o => o.value);
-            fieldSelect.innerHTML = areas.map(a => `<option value="${a}" ${a === parsed.field ? 'selected' : ''}>${a}</option>`).join('');
-        }
-
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
@@ -669,107 +987,100 @@ window.app = {
         if (modal) modal.remove();
     },
 
+    editCVManually() {
+        this.closeCVReviewModal();
+        document.getElementById('profile-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+
+    splitCVList(value) {
+        return String(value || '').split(/[,;\n]/).map((item) => item.trim()).filter(Boolean);
+    },
+
+    collectCVRows(selector, arrayKeys = []) {
+        return Array.from(document.querySelectorAll(selector)).map((row) => {
+            const result = {};
+            row.querySelectorAll('[data-key]').forEach((field) => {
+                result[field.dataset.key] = arrayKeys.includes(field.dataset.key) ? this.splitCVList(field.value) : field.value.trim();
+            });
+            return result;
+        });
+    },
+
     applyCVExtracted() {
-        // Get values from review modal
-        const name = document.getElementById('cv-review-name')?.value || '';
-        const field = document.getElementById('cv-review-field')?.value || '';
-        const skills = document.getElementById('cv-review-skills')?.value || '';
-        const experience = document.getElementById('cv-review-experience')?.value || '';
-        const courses = document.getElementById('cv-review-courses')?.value || '';
-        const linkedin = document.getElementById('cv-review-linkedin')?.value || '';
-
-        // Apply to form fields (matching index.html IDs)
-        const nameEl = document.getElementById('prof-name');
-        const fieldEl = document.getElementById('prof-field');
-        const skillsEl = document.getElementById('prof-skills');
-        const coursesEl = document.getElementById('prof-courses');
-        const experienceEl = document.getElementById('prof-experience');
-        const linkedinEl = document.getElementById('prof-linkedin');
-
-        if (nameEl && name) nameEl.value = name;
-        if (fieldEl && field) fieldEl.value = field;
-        if (skillsEl && skills) skillsEl.value = skills;
-        if (coursesEl && courses) coursesEl.value = courses;
-        if (experienceEl && experience) experienceEl.value = experience;
-        if (linkedinEl && linkedin) linkedinEl.value = linkedin;
+        const value = (id) => document.getElementById(id)?.value.trim() || '';
+        const confidence = this._cvRawParsed?.confidence || {};
+        const parsed = this.normalizeCVData({
+            name: value('cv-review-name'), email: value('cv-review-email'), phone: value('cv-review-phone'),
+            location: value('cv-review-location'), targetRole: value('cv-review-role'), summary: value('cv-review-summary'),
+            education: this.collectCVRows('.cv-education-item'), relevantCourses: this.splitCVList(value('cv-review-courses')),
+            skills: {
+                programmingLanguages: this.splitCVList(value('cv-skills-programmingLanguages')),
+                frameworks: this.splitCVList(value('cv-skills-frameworks')), tools: this.splitCVList(value('cv-skills-tools')),
+                databases: this.splitCVList(value('cv-skills-databases')), softSkills: this.splitCVList(value('cv-skills-softSkills')),
+                other: this.splitCVList(value('cv-skills-other'))
+            },
+            experience: this.collectCVRows('.cv-experience-item', ['skillsUsed']),
+            projects: this.collectCVRows('.cv-project-item', ['technologies']),
+            certifications: this.splitCVList(value('cv-review-certifications')),
+            languages: this.splitCVList(value('cv-review-languages')), missingFields: this._cvRawParsed?.missingFields || [], confidence
+        });
+        const allSkills = Object.values(parsed.skills).flat().join(', ');
+        const experienceText = parsed.experience.map((item) => [item.title, item.organization, [item.startDate, item.endDate].filter(Boolean).join(' – '), item.description, item.skillsUsed.join(', ')].filter(Boolean).join(' | ')).join('\n');
+        const projectText = parsed.projects.map((item) => [`Project: ${item.name}`, item.role, item.description, item.technologies.join(', '), item.impact].filter(Boolean).join(' | ')).join('\n');
+        const fields = [
+            { id: 'prof-name', value: parsed.name, confidence: confidence.name, stateKey: 'name' },
+            { id: 'prof-target-role', value: parsed.targetRole, confidence: 'medium', stateKey: 'targetRole' },
+            { id: 'prof-location', value: parsed.location, confidence: 'medium', stateKey: 'location' },
+            { id: 'prof-phone', value: parsed.phone, confidence: 'medium', stateKey: 'phone' },
+            { id: 'prof-summary', value: parsed.summary, confidence: 'medium', stateKey: 'summary' },
+            { id: 'prof-skills', value: allSkills, confidence: confidence.skills, stateKey: 'skills' },
+            { id: 'prof-courses', value: parsed.relevantCourses.join(', '), confidence: confidence.education, stateKey: 'courses' },
+            { id: 'prof-projects', value: projectText, confidence: confidence.projects, stateKey: 'projects' },
+            { id: 'prof-experience', value: experienceText, confidence: confidence.experience, stateKey: 'experience' },
+            { id: 'prof-certifications', value: parsed.certifications.join('\n'), confidence: 'medium', stateKey: 'certifications' },
+            { id: 'prof-languages', value: parsed.languages.join('\n'), confidence: 'medium', stateKey: 'languages' }
+        ];
+        const saved = [];
+        const skipped = [];
+        fields.forEach((field) => {
+            const element = document.getElementById(field.id);
+            const existing = element?.value.trim() || String(this.state.user[field.stateKey] || '').trim();
+            if (!field.value) return skipped.push(`${field.stateKey}: empty`);
+            if (existing && field.confidence === 'low') return skipped.push(`${field.stateKey}: low confidence`);
+            if (element) element.value = field.value;
+            this.state.user[field.stateKey] = field.value;
+            saved.push(field.stateKey);
+        });
+        const existingCV = this.normalizeCVData(this.state.user.cvData || {});
+        if (confidence.education === 'low' && existingCV.education.length) {
+            parsed.education = existingCV.education;
+            skipped.push('education: low confidence');
+        }
+        if (confidence.skills === 'low' && Object.values(existingCV.skills).some((items) => items.length)) parsed.skills = existingCV.skills;
+        if (confidence.experience === 'low' && existingCV.experience.length) parsed.experience = existingCV.experience;
+        if (confidence.projects === 'low' && existingCV.projects.length) parsed.projects = existingCV.projects;
+        this.state.user.cvData = parsed;
+        saved.push('cvData');
+        this.renderProfileEducation(parsed.education);
+        this.saveUserData();
+        this.debugCV('fields saved to profile', saved);
+        this.debugCV('fields skipped because of low confidence or empty values', skipped);
 
         if (typeof Logger !== 'undefined') {
-            Logger.logCVSubmission(this.state.user, this._cvExtracted || {});
+            Logger.logCVSubmission(this.state.user, parsed);
         }
 
         // Show success message
         const status = document.getElementById('cv-import-status');
         if (status) {
-            status.textContent = '✓ CV information applied to your profile.';
-            status.classList.remove('hidden');
+            status.textContent = `✓ CV information saved to your profile${skipped.length ? '; existing low-confidence fields were kept.' : '.'}`;
+            status.classList.remove('hidden', 'text-red-600', 'text-slate-600');
+            status.classList.add('text-green-600');
+            document.getElementById('cv-fallback-actions')?.classList.add('hidden');
             setTimeout(() => status.classList.add('hidden'), 3000);
         }
 
         this.closeCVReviewModal();
-    },
-
-    switchCVTab(tab) {
-        const isUpload = tab === 'upload';
-        const uploadPanel = document.getElementById('cv-upload-panel');
-        const pastePanel = document.getElementById('cv-paste-panel');
-        const tabUpload = document.getElementById('cv-tab-upload');
-        const tabPaste = document.getElementById('cv-tab-paste');
-        if (uploadPanel) uploadPanel.classList.toggle('hidden', !isUpload);
-        if (pastePanel) pastePanel.classList.toggle('hidden', isUpload);
-        if (tabUpload) {
-            tabUpload.className = `flex-1 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-colors ${isUpload ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-500'}`;
-        }
-        if (tabPaste) {
-            tabPaste.className = `flex-1 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-colors ${!isUpload ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-500'}`;
-        }
-    },
-
-    async handleCVFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const statusEl = document.getElementById('cv-upload-status');
-        if (statusEl) {
-            statusEl.textContent = 'Reading file...';
-            statusEl.classList.remove('hidden');
-        }
-        try {
-            let text = '';
-            if (file.name.endsWith('.txt')) {
-                text = await file.text();
-            } else if (file.name.endsWith('.pdf')) {
-                await this.loadPDFJS();
-                const buffer = await file.arrayBuffer();
-                const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    text += content.items.map(item => item.str).join(' ') + '\n';
-                }
-            }
-            this._pendingCVText = text;
-            if (statusEl) {
-                statusEl.textContent = `✓ ${file.name} loaded — click Auto-fill to extract`;
-                statusEl.classList.remove('hidden');
-            }
-        } catch (err) {
-            if (statusEl) {
-                statusEl.textContent = 'Could not read file. Try pasting the text instead.';
-                statusEl.classList.remove('hidden');
-            }
-        }
-    },
-
-    async loadPDFJS() {
-        if (window.pdfjsLib) return;
-        await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     },
 
     // Improved CV parsing with better extraction
@@ -1083,8 +1394,9 @@ window.app = {
 
     continueAsGuest() {
         this.state.isGuest = true;
+        this.state.currentUser = { email: 'guest@prepwise.local', profile: this.state.user, sessions: [], isGuest: true };
         this.updateUserUI();
-        this.goToStage(1);
+        this.openEditProfile();
     },
 
     updateUserUI() {
@@ -1105,12 +1417,16 @@ window.app = {
             return;
         }
         
-        if (!this.state.user.name) return;
+        if (!this.state.user.name) {
+            this.renderProfileSummary();
+            return;
+        }
         
         const firstName = this.state.user.name.split(' ')[0];
         if (pillName) pillName.textContent = `Hi, ${firstName}!`;
         if (pillInitials) pillInitials.textContent = initials;
         if (pill) pill.classList.remove('hidden');
+        this.renderProfileSummary();
     },
 
     saveUserData() {
@@ -1213,6 +1529,14 @@ window.app = {
                 this.nav.classList.remove('hidden');
             }
         }
+        const mobileNav = document.getElementById('mobile-nav');
+        if (mobileNav) {
+            mobileNav.classList.toggle('hidden', stageNum === 0);
+            mobileNav.classList.toggle('flex', stageNum !== 0);
+        }
+        document.querySelectorAll('[data-nav-stage]').forEach((link) => {
+            link.classList.toggle('active', Number(link.dataset.navStage) === stageNum);
+        });
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
@@ -1567,13 +1891,21 @@ window.app = {
         } else if (this.state.wizard.step === 1 && this.state.wizard.goal === 'general') {
             this.state.wizard.step = 3;
         } else if (this.state.wizard.step === 2) {
+            const jobDescription = document.getElementById('wiz-job-desc')?.value.trim() || '';
+            if (jobDescription.length < 40) {
+                this.showWizardJobStatus('Add at least a short role summary so the interview can be tailored.', true);
+                this.updateWizardControls();
+                return;
+            }
             this.state.wizard.step = 3;
         } else if (this.state.wizard.step === 3) {
             this.state.wizard.step = 4;
         } else if (this.state.wizard.step === 4) {
             this.state.wizard.step = 5;
-            this.updateWizardPreview();
         } else if (this.state.wizard.step === 5) {
+            this.state.wizard.step = 6;
+            this.updateWizardPreview();
+        } else if (this.state.wizard.step === 6) {
             this.startWizardInterview();
             return;
         }
@@ -1581,7 +1913,9 @@ window.app = {
     },
 
     wizardBack() {
-        if (this.state.wizard.step === 5) {
+        if (this.state.wizard.step === 6) {
+            this.state.wizard.step = 5;
+        } else if (this.state.wizard.step === 5) {
             this.state.wizard.step = 4;
         } else if (this.state.wizard.step === 4) {
             this.state.wizard.step = 3;
@@ -1601,7 +1935,9 @@ window.app = {
         document.getElementById(`wiz-step-${step}`).classList.remove('hidden');
         
         const prog = document.getElementById('wizard-progress');
-        if (prog) prog.style.width = `${(step / 5) * 100}%`;
+        if (prog) prog.style.width = `${(step / 6) * 100}%`;
+        const stepLabel = document.getElementById('wizard-step-label');
+        if (stepLabel) stepLabel.textContent = `Step ${step} of 6`;
 
         const backBtn = document.getElementById('wiz-back-btn');
         const nextBtn = document.getElementById('wiz-next-btn');
@@ -1609,31 +1945,76 @@ window.app = {
         if (backBtn) backBtn.classList.toggle('invisible', step === 1);
         
         if (nextBtn) {
-            if (step === 5) {
+            if (step === 6) {
                 nextBtn.innerHTML = 'Start Interview <i data-lucide="play" class="w-4 h-4 ml-1 inline"></i>';
-                nextBtn.classList.add('bg-green-500', 'hover:bg-green-600', 'border-green-600');
-                nextBtn.classList.remove('bg-brand-600', 'hover:bg-brand-700');
             } else {
                 nextBtn.innerHTML = 'Next <i data-lucide="arrow-right" class="w-4 h-4 ml-1 inline"></i>';
-                nextBtn.classList.remove('bg-green-500', 'hover:bg-green-600', 'border-green-600');
-                nextBtn.classList.add('bg-brand-600', 'hover:bg-brand-700');
             }
         }
+        this.updateWizardControls();
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
+    updateWizardControls() {
+        const nextBtn = document.getElementById('wiz-next-btn');
+        if (!nextBtn) return;
+        const needsDescription = this.state.wizard.step === 2 && this.state.wizard.goal === 'specific';
+        const descriptionLength = document.getElementById('wiz-job-desc')?.value.trim().length || 0;
+        nextBtn.disabled = needsDescription && descriptionLength < 40;
+    },
+
+    showWizardJobStatus(message, isError = false) {
+        const status = document.getElementById('wiz-job-status');
+        if (!status) return;
+        status.textContent = message;
+        status.className = `text-xs font-semibold rounded-lg px-3 py-2 ${isError ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`;
+    },
+
+    async handleJobDescriptionUpload(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) return this.showWizardJobStatus('Choose a file smaller than 5MB.', true);
+        this.showWizardJobStatus('Reading job description…');
+        try {
+            let extracted = '';
+            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                const pdf = await pdfjsLib.getDocument(new Uint8Array(await file.arrayBuffer())).promise;
+                for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+                    const page = await pdf.getPage(pageNumber);
+                    const content = await page.getTextContent();
+                    extracted += content.items.map((item) => `${item.str}${item.hasEOL ? '\n' : ' '}`).join('') + '\n';
+                }
+            } else {
+                extracted = await file.text();
+            }
+            const cleaned = this.cleanCVText(extracted);
+            if (cleaned.length < 40) throw new Error('Not enough readable text');
+            document.getElementById('wiz-job-desc').value = cleaned.slice(0, 12000);
+            this.showWizardJobStatus(`✓ ${file.name} added. Review the text before continuing.`);
+            this.updateWizardControls();
+        } catch (error) {
+            console.error('Job description upload failed:', error);
+            this.showWizardJobStatus('We could not read this file. Paste the job description instead.', true);
+        }
+    },
+
     updateWizardPreview() {
-        const styleMap = { 'hr': 'HR / Behavioral', 'technical': 'Technical Deep-Dive', 'project': 'Project Deep-Dive', 'friendly': 'Friendly / Relaxed' };
-        const moodMap = { 'professional': 'Professional', 'friendly': 'Friendly', 'hard': 'Challenging', 'casual': 'Casual' };
+        const styleMap = { hr: 'HR interview', technical: 'Technical interview', behavioral: 'Behavioral interview', situational: 'Situational interview', mixed: 'Mixed final round' };
+        const moodMap = { professional: 'Balanced', friendly: 'Supportive', hard: 'Challenging', casual: 'Casual' };
         const contextMap = { 'specific': 'Specific Job', 'general': 'General Practice' };
+        const config = this.getInterviewConfig(this.state.wizard.length);
         
         const styleEl = document.getElementById('wiz-prev-style');
         const moodEl = document.getElementById('wiz-prev-mood');
         const contextEl = document.getElementById('wiz-prev-context');
+        const lengthEl = document.getElementById('wiz-prev-length');
         
         if (styleEl) styleEl.textContent = styleMap[this.state.wizard.style] || 'HR / Behavioral';
         if (moodEl) moodEl.textContent = moodMap[this.state.wizard.mood] || 'Professional';
         if (contextEl) contextEl.textContent = contextMap[this.state.wizard.goal] || 'Specific Job';
+        if (lengthEl) lengthEl.textContent = config.label;
+        const description = document.getElementById('wiz-preview-description');
+        if (description) description.textContent = `${config.mainTarget} main questions with up to ${config.maxFollowUps} natural follow-up${config.maxFollowUps === 1 ? '' : 's'}.`;
     },
 
     startWizardInterview() {
@@ -1646,7 +2027,7 @@ window.app = {
 
     showModeSelection() {
         const score = this.state.analysis.matchScore;
-        const recommended = score >= 75 ? 'technical' : score >= 55 ? 'hr' : 'friendly';
+        const recommended = score >= 75 ? 'technical' : score >= 55 ? 'hr' : 'behavioral';
         document.querySelectorAll('.mode-card').forEach(card => card.classList.remove('ring-2', 'ring-brand-500'));
         const rec = document.getElementById(`mode-card-${recommended}`);
         if (rec) rec.classList.add('ring-2', 'ring-brand-500');
@@ -1793,6 +2174,68 @@ window.app = {
     clearAnswer() {
         const editArea = document.getElementById('int-answer-area');
         if (editArea) editArea.value = '';
+        this.updateAnswerState();
+    },
+
+    updateAnswerState() {
+        const answer = document.getElementById('int-answer-area')?.value || '';
+        const counter = document.getElementById('int-answer-count');
+        const submit = document.getElementById('int-submit-btn');
+        if (counter) counter.textContent = `${answer.length} character${answer.length === 1 ? '' : 's'}`;
+        if (submit && !submit.dataset.loading) submit.disabled = answer.trim().length < 20;
+    },
+
+    async clarifyCurrentQuestion() {
+        const interview = this.state.interview;
+        const questionIndex = interview.currentQuestionIndex;
+        const existing = interview.clarificationRequests.find((item) => item.questionIndex === questionIndex);
+        if (existing) return this.showQuestionClarification(existing);
+        const button = document.getElementById('int-clarify-btn');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Rephrasing…';
+        }
+        this.setInterviewStatus('Rephrasing the same question without counting an answer…', true);
+        try {
+            const clarification = await this.postJSON('/api/interview-clarify', {
+                current_question: interview.questions[questionIndex],
+                interview_stage: interview.currentStage,
+                interview_type: this.state.interviewMode,
+                question_reason: interview.currentQuestionReason,
+                job_description: this.state.job.description,
+                student_profile: this.state.user
+            });
+            const stored = { questionIndex, originalQuestion: interview.questions[questionIndex], ...clarification };
+            interview.clarificationRequests.push(stored);
+            this.showQuestionClarification(stored);
+            this.setInterviewStatus('Question rephrased. Answer the same question when you are ready.');
+        } catch (error) {
+            console.error('Question clarification failed:', error);
+            this.setInterviewStatus('Could not rephrase the question. You can still answer or skip it.');
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<i data-lucide="message-circle-question" class="w-4 h-4"></i> Explain / rephrase';
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    },
+
+    showQuestionClarification(clarification) {
+        const panel = document.getElementById('int-clarification-panel');
+        if (!panel) return;
+        panel.classList.remove('hidden');
+        const set = (id, value) => { const element = document.getElementById(id); if (element) element.textContent = value || ''; };
+        set('int-clarified-question', clarification.rephrased_question);
+        set('int-clarified-purpose', clarification.what_interviewer_checks);
+        set('int-clarified-hint', clarification.answer_hint);
+    },
+
+    setInterviewStatus(message, isLoading = false) {
+        const status = document.querySelector('#int-ai-state span');
+        const container = document.getElementById('int-ai-state');
+        if (status) status.textContent = message;
+        container?.classList.toggle('animate-pulse', isLoading);
     },
 
     submitInterviewAnswer() {
@@ -1825,38 +2268,23 @@ window.app = {
     updateInterviewProgress() {
         const timeline = document.getElementById('int-progress-timeline');
         if (!timeline) return;
-
-        const currentIdx = this.state.interview.currentQuestionIndex;
-        const total = 6;
-        let html = '';
-
-        for (let i = 0; i < total; i++) {
-            const isPast = i < currentIdx;
-            const isCurrent = i === currentIdx;
-
-            let icon = 'circle';
-            let colorCls = 'bg-slate-800 border-slate-700 text-slate-500';
-
-            if (isPast) {
-                icon = 'check';
-                colorCls = 'bg-brand-500 border-brand-500 text-white';
-            } else if (isCurrent) {
-                icon = 'loader';
-                colorCls = 'bg-slate-800 border-brand-500 text-brand-500 ring-4 ring-brand-500/20';
-            }
-
-            html += `
-                <div class="relative flex items-center gap-4">
-                    <div class="w-6 h-6 rounded-full border-2 ${colorCls} flex items-center justify-center relative z-10 shrink-0">
-                        <i data-lucide="${icon}" class="w-3 h-3 ${isCurrent ? 'animate-spin' : ''}"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <p class="text-xs font-bold ${isCurrent ? 'text-white' : (isPast ? 'text-slate-300' : 'text-slate-500')}">Question ${i + 1}</p>
-                    </div>
-                </div>
-            `;
-        }
-        timeline.innerHTML = html;
+        const interview = this.state.interview;
+        const stages = ['opening', 'role_fit', 'experience', 'behavioral', 'technical', 'closing'];
+        const currentStageIndex = Math.max(0, stages.indexOf(interview.currentStage));
+        timeline.innerHTML = stages.map((stage, index) => {
+            const active = stage === interview.currentStage;
+            const past = index < currentStageIndex;
+            return `<div class="flex items-center gap-2.5 px-2 py-2 rounded-lg ${active ? 'bg-indigo-50 text-brand-700' : 'text-slate-500'}"><span class="w-5 h-5 rounded-full flex items-center justify-center border ${past ? 'bg-brand-500 border-brand-500 text-white' : active ? 'border-brand-500 bg-white text-brand-600' : 'border-slate-200 bg-white text-slate-300'}"><i data-lucide="${past ? 'check' : active ? 'circle-dot' : 'circle'}" class="w-3 h-3"></i></span><span class="text-xs font-semibold">${this.interviewStageLabel(stage)}</span></div>`;
+        }).join('');
+        const completed = interview.responses.length;
+        const displayedTotal = interview.currentStage === 'closing' ? interview.currentQuestionIndex + 1 : interview.maxQuestions;
+        const percentage = Math.min(100, Math.round((completed / displayedTotal) * 100));
+        const summary = document.getElementById('int-progress-summary');
+        const percent = document.getElementById('int-progress-percent');
+        const bar = document.getElementById('int-progress-bar');
+        if (summary) summary.textContent = `Question ${interview.currentQuestionIndex + 1} of ${interview.currentStage === 'closing' ? displayedTotal : `up to ${displayedTotal}`}`;
+        if (percent) percent.textContent = `${percentage}%`;
+        if (bar) bar.style.width = `${percentage}%`;
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
@@ -1865,10 +2293,14 @@ window.app = {
         const qText = document.getElementById('interviewer-question-text');
         const counter = document.getElementById('int-q-counter');
         const typeLabel = document.getElementById('int-type-label');
+        const questionKind = document.getElementById('int-question-kind');
+        const stageLabel = document.getElementById('int-stage-label');
         const nextBtn = document.getElementById('int-submit-btn');
         const editArea = document.getElementById('int-answer-area');
+        const skipButton = document.getElementById('int-skip-btn');
 
         const currentQ = this.state.interview.questions[this.state.interview.currentQuestionIndex];
+        const currentMeta = this.state.interview.questionMeta[this.state.interview.currentQuestionIndex] || {};
 
         if (qText) qText.textContent = currentQ;
         
@@ -1880,14 +2312,30 @@ window.app = {
 
         if (counter) {
             const count = this.state.interview.currentQuestionIndex + 1;
-            counter.textContent = `Question ${count} of 6`;
+            counter.textContent = this.state.interview.currentStage === 'closing'
+                ? `Question ${count} of ${count}`
+                : `Question ${count} of up to ${this.state.interview.maxQuestions}`;
         }
         if (typeLabel) {
-            typeLabel.textContent = this.state.interviewMode + ' Interview';
+            const labels = { hr: 'HR interview', technical: 'Technical interview', behavioral: 'Behavioral interview', situational: 'Situational interview', mixed: 'Mixed final round' };
+            typeLabel.textContent = labels[this.state.interviewMode] || `${this.state.interviewMode} interview`;
         }
+        if (questionKind) {
+            const kinds = { follow_up: 'Follow-up on your answer', technical: 'Job-specific topic', behavioral: 'Behavioral topic', situational: 'Situational scenario', role_fit: 'Role-fit topic', experience: 'From your profile', closing: 'Closing question', opening: 'Opening question' };
+            const topic = currentMeta.topic || this.state.interview.currentTopic;
+            questionKind.textContent = currentMeta.isFollowUp
+                ? `Follow-up${topic ? ` · ${topic}` : ''}`
+                : (topic || kinds[this.state.interview.currentQuestionType] || 'New topic');
+        }
+        if (stageLabel) stageLabel.textContent = this.interviewStageLabel(this.state.interview.currentStage);
+        const reason = document.getElementById('int-question-reason');
+        if (reason) reason.textContent = this.state.interview.currentQuestionReason || currentMeta.reason || 'This question checks your fit for the role.';
+        const headerLength = document.getElementById('int-header-length');
+        if (headerLength) headerLength.textContent = this.getInterviewConfig(this.state.interview.length).label;
 
         if (nextBtn) {
-            nextBtn.disabled = false;
+            delete nextBtn.dataset.loading;
+            nextBtn.disabled = true;
             nextBtn.innerHTML = 'Submit Answer <i data-lucide="send" class="w-4 h-4 ml-1 inline"></i>';
         }
 
@@ -1895,6 +2343,10 @@ window.app = {
             editArea.value = '';
             editArea.focus();
         }
+        if (skipButton) skipButton.disabled = false;
+        document.getElementById('int-clarification-panel')?.classList.add('hidden');
+        this.updateAnswerState();
+        this.setInterviewStatus(currentMeta.isFollowUp ? 'Follow-up based on your previous answer' : `New ${this.interviewStageLabel(this.state.interview.currentStage).toLowerCase()} topic`);
 
         this.updateInterviewProgress();
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1904,59 +2356,109 @@ window.app = {
         if (callback) callback();
     },
 
+    completeInterview() {
+        const interview = this.state.interview;
+        const count = document.getElementById('completion-question-count');
+        const answered = interview.responses.filter((response) => response.status !== 'skipped').length;
+        if (count) count.textContent = `${answered} answered · ${interview.skippedQuestions.length} skipped`;
+        this.goToStage(5);
+        setTimeout(() => this.generateFinalReport(), 500);
+    },
+
+    localQuestionResult(question, { followUp = false, stage } = {}) {
+        const nextStage = stage || this.state.interview.currentStage || 'role_fit';
+        return {
+            next_question: question,
+            reason: 'This question connects your background to the role.',
+            question_type: followUp ? 'follow_up' : nextStage,
+            interview_stage: nextStage,
+            topic: this.interviewStageLabel(nextStage),
+            job_requirement: this.state.user.targetRole || this.state.user.field || 'Role fit',
+            is_follow_up: followUp
+        };
+    },
+
+    plannedInterviewStage() {
+        const interview = this.state.interview;
+        const mainNumber = interview.mainQuestionsAsked + 1;
+        if (mainNumber === 1) return 'opening';
+        if (interview.length === 'full') {
+            if (mainNumber <= 3) return 'role_fit';
+            if (mainNumber <= 6) return 'experience';
+            if (mainNumber <= 9) return 'behavioral';
+            if (mainNumber <= 13) return 'technical';
+            return 'closing';
+        }
+        return ({ 2: 'role_fit', 3: 'experience', 4: 'behavioral', 5: 'technical' })[mainNumber] || 'closing';
+    },
+
+    localStageQuestion(stage) {
+        const role = this.state.user.targetRole || this.state.user.field || 'this role';
+        const skill = this.splitCVList(this.state.user.skills)[0] || 'your core skills';
+        const experience = this.state.user.cvData?.projects?.[0]?.name || this.state.user.cvData?.experience?.[0]?.title || 'a relevant project or experience';
+        const questions = {
+            opening: `Give me a brief introduction to your background and explain which experience best prepares you for ${role}.`,
+            role_fit: `Which responsibility in this ${role} opportunity would be most important for you to master first, and why?`,
+            experience: `Walk me through ${experience}. What did you personally own, and what result did it produce?`,
+            behavioral: `Tell me about a time you had to solve a difficult problem with other people. What was your contribution and the outcome?`,
+            technical: `How would you apply ${skill} to solve a realistic problem in this ${role} position? Explain your approach and trade-offs.`,
+            closing: `Based on the requirements and your background, why are you a strong fit for this ${role} opportunity?`
+        };
+        return questions[stage] || questions.role_fit;
+    },
+
     async skipQuestion() {
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         this.stopListening();
         const nextBtn = document.getElementById('int-submit-btn');
         const qText = document.getElementById('interviewer-question-text');
+        const skipButton = document.getElementById('int-skip-btn');
 
         if (nextBtn) {
             nextBtn.disabled = true;
+            nextBtn.dataset.loading = 'true';
             nextBtn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Skipping...';
         }
         if (qText) qText.textContent = 'Generating next question...';
+        if (skipButton) skipButton.disabled = true;
+        this.setInterviewStatus('Question skipped. Moving to the next relevant topic…', true);
 
         const previousQuestion = this.state.interview.questions[this.state.interview.currentQuestionIndex];
 
-        const answer = "(Student skipped this question)";
-        this.state.interview.latestAnswer = answer;
+        const currentMeta = this.state.interview.questionMeta[this.state.interview.currentQuestionIndex] || {};
+        this.state.interview.latestAnswer = '[Question skipped]';
         this.state.interview.previousQuestion = previousQuestion;
-        this.state.interview.transcript.push({ role: "user", content: answer });
+        this.state.interview.transcript.push({ role: 'user', content: '[Candidate skipped this question. This is not an answer.]' });
 
         if (typeof Logger !== 'undefined') {
             const duration = Math.round((new Date() - this.state.interview.questionStartTime) / 1000);
-            Logger.logAnswer(this.state.interview.currentQuestionIndex + 1, answer, duration);
+            Logger.logAnswer(this.state.interview.currentQuestionIndex + 1, '[Skipped]', duration);
         }
 
-        const messages = this.state.interview.transcript.map(msg => ({
-            role: msg.role,
-            content: msg.content
-        }));
+        const skipped = {
+            question: previousQuestion, stage: currentMeta.stage || this.state.interview.currentStage,
+            topic: currentMeta.topic || this.state.interview.currentTopic,
+            jobRequirement: currentMeta.jobRequirement || this.state.interview.currentJobRequirement
+        };
+        this.state.interview.skippedQuestions.push(skipped);
+        this.state.interview.responses.push({ ...skipped, answer: '', status: 'skipped', feedback: 'Skipped' });
 
-        const aiMessage = await this.callModelAPI(messages, this.getInterviewSystemPrompt());
+        if (this.shouldCompleteInterview()) return this.completeInterview();
 
-        if (aiMessage) {
-            this.state.interview.responses.push({ question: previousQuestion, answer, feedback: "Skipped" });
-            this.state.interview.transcript.push({ role: "assistant", content: aiMessage });
-            this.state.interview.askedQuestions.push(aiMessage);
-
-            this.state.interview.questions.push(aiMessage);
+        try {
+            const result = await this.requestInterviewQuestion();
+            this.appendGeneratedQuestion(result);
             this.state.interview.currentQuestionIndex++;
             this.resetTranscriptState();
 
-            if (aiMessage.toLowerCase().includes("thank you for your time") || this.state.interview.currentQuestionIndex > 5) {
-                this.goToStage(5);
-                setTimeout(() => {
-                    this.generateFinalReport();
-                }, 2000);
-            } else {
-                this.askQuestion();
-            }
-        } else {
-            if (nextBtn) {
-                nextBtn.disabled = false;
-                nextBtn.innerHTML = 'Submit Answer <i data-lucide="send" class="w-4 h-4 ml-1 inline"></i>';
-            }
+            this.askQuestion();
+        } catch (error) {
+            console.error('Could not generate the next question; using local fallback:', error);
+            const stage = this.plannedInterviewStage();
+            this.appendGeneratedQuestion(this.localQuestionResult(this.localStageQuestion(stage), { stage }));
+            this.state.interview.currentQuestionIndex++;
+            this.resetTranscriptState();
+            this.askQuestion();
         }
     },
 
@@ -1970,8 +2472,10 @@ window.app = {
 
         if (nextBtn) {
             nextBtn.disabled = true;
+            nextBtn.dataset.loading = 'true';
             nextBtn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Crafting next question...';
         }
+        this.setInterviewStatus('Reviewing your answer and choosing the best next question…', true);
 
         const previousQuestion = this.state.interview.questions[this.state.interview.currentQuestionIndex];
 
@@ -1986,45 +2490,57 @@ window.app = {
 
         if (qText) qText.textContent = 'Crafting next question...';
         
-        const messages = this.state.interview.transcript.map(msg => ({ role: msg.role, content: msg.content }));
+        const currentMeta = this.state.interview.questionMeta[this.state.interview.currentQuestionIndex] || {};
+        this.state.interview.responses.push({
+            question: previousQuestion, answer, status: 'answered', feedback: 'Analyzed',
+            stage: currentMeta.stage || this.state.interview.currentStage,
+            topic: currentMeta.topic || this.state.interview.currentTopic,
+            jobRequirement: currentMeta.jobRequirement || this.state.interview.currentJobRequirement,
+            clarificationRequested: this.state.interview.clarificationRequests.some((item) => item.questionIndex === this.state.interview.currentQuestionIndex)
+        });
 
-        const aiMessage = await this.callModelAPI(messages, this.getInterviewSystemPrompt());
+        if (this.shouldCompleteInterview()) return this.completeInterview();
 
-        if (aiMessage) {
-            this.state.interview.responses.push({ question: previousQuestion, answer, feedback: "Analyzed" });
-            this.state.interview.transcript.push({ role: "assistant", content: aiMessage });
-            this.state.interview.askedQuestions.push(aiMessage);
-
-            this.state.interview.questions.push(aiMessage);
+        try {
+            const result = await this.requestInterviewQuestion();
+            this.appendGeneratedQuestion(result);
             this.state.interview.currentQuestionIndex++;
             this.resetTranscriptState();
 
-            if (aiMessage.toLowerCase().includes("thank you for your time") || this.state.interview.currentQuestionIndex > 5) {
-                this.goToStage(5);
-                setTimeout(() => {
-                    this.generateFinalReport();
-                }, 2000);
-            } else {
-                this.askQuestion();
-            }
-        } else {
-            if (qText) qText.textContent = 'AI Generation failed. Check connection.';
-            if (nextBtn) {
-                nextBtn.disabled = false;
-                nextBtn.innerHTML = 'Submit Answer <i data-lucide="send" class="w-4 h-4 ml-1 inline"></i>';
-            }
+            this.askQuestion();
+        } catch (error) {
+            console.error('Could not generate the next question; using local fallback:', error);
+            const stage = this.plannedInterviewStage();
+            this.appendGeneratedQuestion(this.localQuestionResult(this.localStageQuestion(stage), { stage }));
+            this.state.interview.currentQuestionIndex++;
+            this.resetTranscriptState();
+            this.askQuestion();
         }
     },
 
     async startInterview() {
-        // Reset Stateful Interview Object
+        const config = this.getInterviewConfig(this.state.wizard.length);
         this.state.interview = {
+            length: config.length,
+            mainTarget: config.mainTarget,
+            maxQuestions: config.maxQuestions,
+            maxFollowUps: config.maxFollowUps,
+            mainQuestionsAsked: 0,
+            followUpsAsked: 0,
             currentQuestionIndex: 0,
             questions: [],
+            questionMeta: [],
             responses: [],
+            skippedQuestions: [],
+            clarificationRequests: [],
+            coveredJobRequirements: [],
             startTime: new Date(),
             isListening: false,
             awaitingFollowUp: false,
+            currentStage: 'opening',
+            currentTopic: 'Introduction',
+            currentQuestionReason: '',
+            currentJobRequirement: '',
             previousQuestion: '',
             latestAnswer: '',
             transcript: [],
@@ -2038,20 +2554,12 @@ window.app = {
             Logger.logInterviewStart(this.state.user, this.state.interviewMode, this.state.job.description);
         }
 
-        const opening = await this.callModelAPI(
-            "Start the interview. Introduce yourself briefly and ask the first question.", 
-            this.getInterviewSystemPrompt()
-        );
-
-        if (opening) {
-            this.state.interview.questions.push(opening);
-            this.state.interview.transcript.push({ role: "assistant", content: opening });
-            this.state.interview.askedQuestions.push(opening);
-        } else {
-            const fallback = `Hi! Tell me about yourself and your background in ${this.state.user.field}.`;
-            this.state.interview.questions.push(fallback);
-            this.state.interview.transcript.push({ role: "assistant", content: fallback });
-            this.state.interview.askedQuestions.push(fallback);
+        try {
+            const result = await this.requestInterviewQuestion();
+            this.appendGeneratedQuestion(result);
+        } catch (error) {
+            console.error('Could not start the AI interview; using local opening question:', error);
+            this.appendGeneratedQuestion(this.localQuestionResult(this.localStageQuestion('opening'), { stage: 'opening' }));
         }
 
         this.goToStage(4);
@@ -2060,74 +2568,45 @@ window.app = {
     },
     async generateFinalReport() {
         const responses = this.state.interview.responses;
-        const transcript = responses.map(r => `Interviewer: ${r.question}\nCandidate: ${r.answer}`).join('\n');
-        
-        const reportPrompt = `
-            The interview is complete. Analyze the following transcript and provide a detailed career coach evaluation.
-            
-            TRANSCRIPT:
-            ${transcript}
-            
-            Follow these rules for the evaluation:
-            1. Overall score: X/10
-            2. Strong points: List 3 key strengths.
-            3. Needs improvement: List 3 specific areas to work on.
-            4. Action plan: Create 3 practical tasks for them to improve before their next interview.
-            5. Best answer: Mention which answer was best and why.
-            6. Weakest answer: Mention which answer was weakest and how to improve it gently.
-            7. Practical improvement: Rewrite the weakest answer using the STAR method (Situation, Task, Action, Result) as an example.
-            
-            Format your response as a JSON object:
-            {
-                "score": number,
-                "strengths": ["string", "string", "string"],
-                "improvements": ["string", "string", "string"],
-                "actionPlan": ["string", "string", "string"],
-                "bestAnswer": "string",
-                "weakestAnswer": "string",
-                "starExample": "string"
-            }
-        `;
 
         const statusEl = document.getElementById('completion-status-text');
         if (statusEl) statusEl.textContent = 'Analyzing your performance...';
 
-        const aiReportRaw = await this.callModelAPI(reportPrompt, "You are an expert career coach. Always respond in valid JSON.", true);
-        
         try {
-            const jsonMatch = aiReportRaw.match(/\{[\s\S]*\}/);
-            const aiReport = JSON.parse(jsonMatch ? jsonMatch[0] : aiReportRaw);
+            const report = await this.postJSON('/api/final-report', {
+                full_interview_transcript: responses,
+                skipped_questions: this.state.interview.skippedQuestions,
+                interview_type: this.state.interviewMode,
+                interview_length: this.state.interview.length,
+                job_description: this.state.job.description,
+                student_profile: this.state.user
+            });
+            const reviews = report.question_reviews || [];
+            const bestReview = reviews.reduce((best, review) => !best || review.score > best.score ? review : best, null);
+            const weakestReview = reviews.reduce((worst, review) => !worst || review.score < worst.score ? review : worst, null);
+            const aiReport = {
+                score: report.overall_score,
+                strengths: report.strengths?.length ? report.strengths : [report.top_strength],
+                improvements: report.improvements?.length ? report.improvements : [report.main_improvement],
+                actionPlan: report.action_plan,
+                bestAnswer: bestReview ? bestReview.what_went_well : report.top_strength,
+                weakestAnswer: weakestReview ? weakestReview.what_to_improve : report.main_improvement,
+                starExample: weakestReview?.better_answer_example || '',
+                questionReviews: reviews,
+                dimensionScores: report.dimension_scores || {},
+                technicalGaps: report.technical_gaps || [],
+                requirementsCovered: report.job_requirements_covered || [],
+                requirementsToPractice: report.job_requirements_to_practice || [],
+                recommendedPracticeQuestions: report.recommended_practice_questions || [],
+                skippedQuestions: this.state.interview.skippedQuestions || [],
+                scoringSummary: report.scoring_summary || '',
+                finalRecommendation: report.final_recommendation || ''
+            };
+            aiReport.date = new Date().toLocaleDateString();
+            aiReport.interviewType = this.state.interviewMode;
+            aiReport.summary = aiReport.scoringSummary || aiReport.finalRecommendation;
 
-            const el = (id) => document.getElementById(id);
-            
-            if (el('rep-score')) el('rep-score').textContent = aiReport.score;
-            if (el('rep-score-label')) {
-                const s = aiReport.score;
-                el('rep-score-label').textContent = s >= 9 ? 'Excellent' : (s >= 7 ? 'Good' : (s >= 5 ? 'Needs Practice' : 'Beginner'));
-            }
-            if (el('rep-strengths')) el('rep-strengths').innerHTML = (aiReport.strengths || []).map(s => `<li><i data-lucide="check" class="w-3.5 h-3.5 text-green-500 inline mr-1"></i> ${s}</li>`).join('');
-            if (el('rep-weaknesses')) el('rep-weaknesses').innerHTML = (aiReport.improvements || []).map(i => `<li><i data-lucide="x" class="w-3.5 h-3.5 text-orange-400 inline mr-1"></i> ${i}</li>`).join('');
-            if (el('rep-action-plan')) el('rep-action-plan').innerHTML = (aiReport.actionPlan || aiReport.improvements || []).map(a => `<li class="flex gap-2 items-start"><i data-lucide="arrow-right-circle" class="w-4 h-4 text-brand-500 mt-0.5 shrink-0"></i> <span>${a}</span></li>`).join('');
-            
-            if (el('rep-best-answer')) el('rep-best-answer').textContent = `"${aiReport.bestAnswer}"`;
-            if (el('rep-worst-answer')) el('rep-worst-answer').textContent = `"${aiReport.weakestAnswer}"`;
-            if (el('rep-star-example')) el('rep-star-example').textContent = aiReport.starExample;
-
-            const qReviewContainer = el('rep-q-review');
-            if (qReviewContainer) {
-                qReviewContainer.innerHTML = responses.map((r, i) => {
-                    const noResponse = !r.answer || r.answer.length < 5 || r.answer.includes("skipped");
-                    return `
-                        <div class="card space-y-3">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Question ${i+1}</p>
-                            <p class="text-sm font-bold text-slate-800 leading-relaxed">${r.question}</p>
-                            <div class="bg-slate-50 p-4 rounded-xl border-l-4 ${noResponse ? 'border-orange-300 italic text-slate-400' : 'border-brand-500 text-slate-700'} text-sm leading-relaxed">
-                                ${noResponse ? 'Skipped or no response recorded.' : r.answer}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
+            this.renderReportView(aiReport);
 
             this.saveSession(aiReport);
 
@@ -2142,11 +2621,118 @@ window.app = {
             if (continueBtn) continueBtn.classList.remove('hidden');
 
         } catch (e) {
-            console.error("Failed to parse AI report:", e);
-            if (statusEl) statusEl.textContent = 'Analysis failed. Please try again.';
+            console.error("Failed to generate AI report:", e);
+            if (statusEl) statusEl.textContent = `Analysis failed: ${e.message}`;
         }
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    renderReportView(report) {
+        const el = (id) => document.getElementById(id);
+        const splitIntoBullets = (value) => {
+            const source = Array.isArray(value) ? value : [value];
+            const parts = source
+                .flatMap((item) => String(item || '').split(/\n+|(?:\.\s+)|(?:;\s+)|(?:,\s+(?=[A-Z]))/))
+                .map((part) => part.trim())
+                .filter(Boolean);
+            return parts.slice(0, 3);
+        };
+        const renderBulletList = (targetId, value, emptyText) => {
+            const node = el(targetId);
+            if (!node) return;
+            const items = splitIntoBullets(value);
+            node.innerHTML = items.length
+                ? items.map((item) => `<li>${this.escapeHTML(item)}</li>`).join('')
+                : `<li>${this.escapeHTML(emptyText)}</li>`;
+        };
+        if (el('rep-score')) el('rep-score').textContent = report.score;
+        if (el('rep-score-label')) {
+            const s = Number(report.score) || 0;
+            el('rep-score-label').textContent = report.scoreLabel || (s === 0 ? 'Not enough evidence' : (s >= 9 ? 'Excellent' : (s >= 7 ? 'Good' : (s >= 5 ? 'Needs Practice' : 'Beginner'))));
+        }
+        if (el('rep-type')) el('rep-type').textContent = report.interviewType || 'Interview';
+        if (el('rep-date')) el('rep-date').textContent = report.date || '';
+        if (el('rep-summary')) {
+            const summary = String(report.summary || report.finalRecommendation || 'A clear summary of how you performed, what matters most, and what to practice next.').trim();
+            const firstLine = summary.split(/(?<=[.!?])\s+/)[0];
+            el('rep-summary').textContent = firstLine.length > 180 ? `${firstLine.slice(0, 177).trim()}…` : firstLine;
+        }
+        renderBulletList('rep-top-strength', report.strengths?.length ? report.strengths : [report.top_strength], 'No clear strength yet.');
+        renderBulletList('rep-main-improvement', report.improvements?.length ? report.improvements : [report.main_improvement], 'No clear improvement area yet.');
+        renderBulletList('rep-next-practice', report.recommended_practice_questions?.length ? report.recommended_practice_questions : report.actionPlan, 'Practice the weakest answer again with more detail.');
+
+        const actionPlan = el('rep-action-plan');
+        if (actionPlan) {
+            actionPlan.innerHTML = (report.actionPlan || report.improvements || []).slice(0, 3).map((item) => `
+                <li class="flex gap-2 items-start">
+                    <i data-lucide="arrow-right-circle" class="w-4 h-4 text-brand-500 mt-0.5 shrink-0"></i>
+                    <span>${this.escapeHTML(item)}</span>
+                </li>
+            `).join('') || '<li class="text-slate-400">No action plan available yet.</li>';
+        }
+
+        const qReviewContainer = el('rep-q-review');
+        if (qReviewContainer) {
+            const reviews = report.questionReviews || [];
+            qReviewContainer.innerHTML = reviews.length ? reviews.map((review, i) => `
+                <article class="report-question-card space-y-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="space-y-2">
+                            <p class="text-xs font-bold text-brand-600">Question ${i + 1}</p>
+                            <p class="text-[15px] font-bold text-slate-900 leading-relaxed">${this.escapeHTML(review.question)}</p>
+                        </div>
+                        <span class="report-score-chip shrink-0">${this.escapeHTML(review.score)}/10</span>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 mb-2">Your answer</p>
+                        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-sm text-slate-700 leading-relaxed">
+                            ${this.escapeHTML(review.answer)}
+                        </div>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-3 text-sm">
+                        <div class="report-feedback-soft report-feedback-soft--positive">
+                            <p class="text-xs font-bold text-emerald-700 mb-2">What went well</p>
+                            <ul class="space-y-2 text-slate-700">
+                                ${(splitIntoBullets(review.what_went_well).length ? splitIntoBullets(review.what_went_well) : ['No clear strength was demonstrated yet.']).map((item) => `<li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"></span><span>${this.escapeHTML(item)}</span></li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="report-feedback-soft report-feedback-soft--improve">
+                            <p class="text-xs font-bold text-orange-700 mb-2">What to improve</p>
+                            <ul class="space-y-2 text-slate-700">
+                                ${(splitIntoBullets(review.what_to_improve).length ? splitIntoBullets(review.what_to_improve) : ['Add a clearer example and outcome.']).map((item) => `<li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0"></span><span>${this.escapeHTML(item)}</span></li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                    <details class="rounded-xl border border-indigo-100 bg-indigo-50/55 p-4">
+                        <summary class="report-answer-toggle cursor-pointer list-none text-sm font-semibold text-brand-700">
+                            <span>Better answer</span>
+                            <i data-lucide="chevron-down" class="report-chevron w-4 h-4 shrink-0 transition-transform"></i>
+                        </summary>
+                        <p class="mt-3 text-sm text-slate-700 leading-relaxed">${this.escapeHTML(review.better_answer_example)}</p>
+                    </details>
+                </article>
+            `).join('') : '<div class="text-sm text-slate-500">No answered questions were available to review.</div>';
+        }
+
+        this.renderReportDetails(report);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    renderReportDetails(report) {
+        const renderList = (id, items, emptyText) => {
+            const container = document.getElementById(id);
+            if (!container) return;
+            container.innerHTML = (items || []).length
+                ? items.map((item) => `<li class="flex gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-brand-500 mt-0.5 shrink-0"></i><span>${this.escapeHTML(item)}</span></li>`).join('')
+                : `<li class="text-slate-400">${emptyText}</li>`;
+        };
+        renderList('rep-requirements-covered', report.requirementsCovered, 'No requirement had enough evidence yet.');
+        renderList('rep-requirements-practice', report.requirementsToPractice, 'No additional requirement was identified.');
+        const skipped = document.getElementById('rep-skipped-questions');
+        if (skipped) skipped.innerHTML = (report.skippedQuestions || []).length
+            ? report.skippedQuestions.map((item, index) => `<div class="p-3 bg-slate-50 border border-slate-100 rounded-xl"><p class="text-xs font-bold text-slate-400 mb-1">Skipped ${index + 1} · ${this.escapeHTML(this.interviewStageLabel(item.stage))}</p><p>${this.escapeHTML(item.question)}</p></div>`).join('')
+            : '<p class="text-slate-400">No questions were skipped.</p>';
     },
 
     handleReportContinue() {
@@ -2184,6 +2770,16 @@ window.app = {
             bestAnswer: aiReport.bestAnswer || '',
             weakestAnswer: aiReport.weakestAnswer || '',
             starExample: aiReport.starExample || '',
+            questionReviews: aiReport.questionReviews || [],
+            dimensionScores: aiReport.dimensionScores || {},
+            technicalGaps: aiReport.technicalGaps || [],
+            requirementsCovered: aiReport.requirementsCovered || [],
+            requirementsToPractice: aiReport.requirementsToPractice || [],
+            recommendedPracticeQuestions: aiReport.recommendedPracticeQuestions || [],
+            skippedQuestions: aiReport.skippedQuestions || [],
+            interviewLength: this.state.interview.length,
+            scoringSummary: aiReport.scoringSummary || '',
+            finalRecommendation: aiReport.finalRecommendation || '',
             responses: JSON.parse(JSON.stringify(this.state.interview.responses))
         });
         this.saveUserData();
@@ -2282,52 +2878,66 @@ window.app = {
     loadSessionReport(index) {
         const s = this.state.sessions[index];
         if (!s) return;
-
-        const el = (id) => document.getElementById(id);
         
         // Switch to report stage
         this.goToStage(6);
-
-        // Populate values
-        if (el('rep-score')) el('rep-score').textContent = s.score;
-        if (el('rep-score-label')) {
-            el('rep-score-label').textContent = s.score >= 9 ? 'Excellent' : (s.score >= 7 ? 'Good' : (s.score >= 5 ? 'Needs Practice' : 'Beginner'));
-        }
-        
-        if (el('rep-strengths')) el('rep-strengths').innerHTML = (s.strengths || []).map(str => `<li><i data-lucide="check" class="w-3.5 h-3.5 text-green-500 inline mr-1"></i> ${str}</li>`).join('');
-        if (el('rep-weaknesses')) el('rep-weaknesses').innerHTML = (s.weaknesses || []).map(w => `<li><i data-lucide="x" class="w-3.5 h-3.5 text-orange-400 inline mr-1"></i> ${w}</li>`).join('');
-        if (el('rep-action-plan')) el('rep-action-plan').innerHTML = (s.actionPlan || s.weaknesses || []).map(a => `<li class="flex gap-2 items-start"><i data-lucide="arrow-right-circle" class="w-4 h-4 text-brand-500 mt-0.5 shrink-0"></i> <span>${a}</span></li>`).join('');
-        
-        if (el('rep-best-answer')) el('rep-best-answer').textContent = s.bestAnswer ? `"${s.bestAnswer}"` : "N/A";
-        if (el('rep-worst-answer')) el('rep-worst-answer').textContent = s.weakestAnswer ? `"${s.weakestAnswer}"` : "N/A";
-        if (el('rep-star-example')) el('rep-star-example').textContent = s.starExample || "N/A";
-
-        const qReviewContainer = el('rep-q-review');
-        if (qReviewContainer && s.responses) {
-            qReviewContainer.innerHTML = s.responses.map((r, i) => {
-                const noResponse = !r.answer || r.answer.length < 5 || r.answer.includes("skipped");
-                return `
-                    <div class="card space-y-3">
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Question ${i+1}</p>
-                        <p class="text-sm font-bold text-slate-800 leading-relaxed">${r.question}</p>
-                        <div class="bg-slate-50 p-4 rounded-xl border-l-4 ${noResponse ? 'border-orange-300 italic text-slate-400' : 'border-brand-500 text-slate-700'} text-sm leading-relaxed">
-                            ${noResponse ? 'Skipped or no response recorded.' : r.answer}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.renderReportView({
+            score: s.score,
+            top_strength: s.strengths?.[0] || 'No clear strength yet.',
+            main_improvement: s.weaknesses?.[0] || 'No clear improvement area yet.',
+            recommended_practice_questions: s.recommendedPracticeQuestions || [],
+            actionPlan: s.actionPlan || s.weaknesses || [],
+            questionReviews: s.questionReviews || [],
+            requirementsCovered: s.requirementsCovered || [],
+            requirementsToPractice: s.requirementsToPractice || [],
+            skippedQuestions: s.skippedQuestions || [],
+            interviewType: s.mode || 'Interview',
+            date: s.date || '',
+            summary: s.scoringSummary || s.finalRecommendation || '',
+            finalRecommendation: s.finalRecommendation || '',
+            scoreLabel: s.score === 0 ? 'Not enough evidence' : (s.score >= 9 ? 'Excellent' : (s.score >= 7 ? 'Good' : (s.score >= 5 ? 'Needs Practice' : 'Beginner')))
+        });
     },
 
     // --- Dashboard ---
+    formatDashboardName(name) {
+        const first = String(name || 'Guest').trim().split(/\s+/)[0] || 'Guest';
+        if (first.toLowerCase() === 'guest') return 'Guest';
+        if (first === first.toUpperCase() || first === first.toLowerCase()) {
+            return first.charAt(0).toLocaleUpperCase() + first.slice(1).toLocaleLowerCase();
+        }
+        return first;
+    },
+
+    toggleDashboardCard(button) {
+        const container = document.getElementById(button.dataset.dashboardExpand);
+        if (!container) return;
+        const expanded = container.classList.toggle('is-expanded');
+        button.textContent = expanded ? 'Show less' : 'Show more';
+        if (!expanded) requestAnimationFrame(() => this.refreshDashboardExpanders());
+    },
+
+    refreshDashboardExpanders() {
+        document.querySelectorAll('[data-dashboard-expand]').forEach((button) => {
+            const container = document.getElementById(button.dataset.dashboardExpand);
+            if (!container) return;
+            if (container.classList.contains('is-expanded')) {
+                button.classList.remove('hidden');
+                return;
+            }
+            const textBlocks = container.querySelectorAll('.dashboard-clamp-title, .dashboard-clamp-copy');
+            const truncated = Array.from(textBlocks).some((block) => block.scrollHeight > block.clientHeight + 1);
+            button.classList.toggle('hidden', !truncated);
+            button.textContent = 'Show more';
+        });
+    },
+
     _updateDashboardUI() {
         const el = (id) => document.getElementById(id);
         const name = this.state.user.name || 'Guest';
-        const firstName = name.split(' ')[0];
+        const firstName = this.formatDashboardName(name);
 
-        if (el('dash-greeting')) el('dash-greeting').textContent = `Hi ${firstName} — let's get you interview-ready.`;
+        if (el('dash-welcome-name')) el('dash-welcome-name').textContent = firstName;
         if (el('nav-user-avatar')) el('nav-user-avatar').textContent = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
         // Profile Completeness
@@ -2352,6 +2962,13 @@ window.app = {
 
         // Readiness Score Card
         const hasInterviews = this.state.sessions.length > 0;
+        if (el('dash-welcome-copy')) {
+            el('dash-welcome-copy').textContent = hasInterviews
+                ? 'Your latest feedback is ready. Continue with the recommendation below or revisit a previous report.'
+                : (pct >= 60
+                    ? 'Your profile has enough context. Build a focused practice session when you are ready.'
+                    : 'Start with your profile so the interviewer can ask questions that fit your background and goals.');
+        }
         if (!hasInterviews) {
             if (el('dash-readiness-score')) el('dash-readiness-score').textContent = "--";
             if (el('dash-readiness-score')) el('dash-readiness-score').className = "text-6xl font-black text-slate-200 tracking-tighter";
@@ -2369,23 +2986,27 @@ window.app = {
 
         // Focus Area Card
         if (!hasInterviews) {
-            if (el('dash-focus-area-title')) el('dash-focus-area-title').textContent = "Focus Area";
-            if (el('dash-focus-area-desc')) el('dash-focus-area-desc').textContent = "Complete your first interview to see your focus areas.";
-            if (el('dash-focus-btn')) el('dash-focus-btn').textContent = "Practice this";
+            if (el('dash-focus-area-title')) el('dash-focus-area-title').textContent = "What to practice next";
+            if (el('dash-focus-area-desc')) el('dash-focus-area-desc').textContent = "After one interview, this will show the single skill to focus on next.";
+            if (el('dash-focus-btn')) el('dash-focus-btn').textContent = "Practice this area";
         } else {
             const latest = this.state.sessions[0];
             if (latest.weaknesses && latest.weaknesses.length > 0) {
                 if (el('dash-focus-area-title')) el('dash-focus-area-title').textContent = latest.weaknesses[0];
-                if (el('dash-focus-area-desc')) el('dash-focus-area-desc').textContent = "Work on this specific area to improve your overall readiness score.";
-                if (el('dash-focus-btn')) el('dash-focus-btn').textContent = "Practice this";
+                if (el('dash-focus-area-desc')) el('dash-focus-area-desc').textContent = "This is the main thing to improve before your next session.";
+                if (el('dash-focus-btn')) el('dash-focus-btn').textContent = "Practice this area";
             }
         }
 
         // Recommended Next Session Card
         if (!hasInterviews) {
-            if (el('dash-session-suggestion-title')) el('dash-session-suggestion-title').textContent = "Start an Interview";
-            if (el('dash-session-suggestion-desc')) el('dash-session-suggestion-desc').textContent = "Start a general practice session to get your baseline score.";
-            if (el('dash-suggestion-btn')) el('dash-suggestion-btn').textContent = "Start now";
+            const profileReady = Boolean(this.state.user.name && this.state.user.skills && (this.state.user.experience || this.state.user.cvData?.education?.length));
+            if (el('dash-session-suggestion-title')) el('dash-session-suggestion-title').textContent = profileReady ? 'Start an interview' : 'Complete your profile';
+            if (el('dash-session-suggestion-desc')) el('dash-session-suggestion-desc').textContent = profileReady ? 'Choose a short or full adaptive session tailored to your goal.' : 'Add your background first so the interviewer can ask relevant questions.';
+            if (el('dash-suggestion-btn')) {
+                el('dash-suggestion-btn').textContent = profileReady ? 'Set up interview' : 'Continue profile';
+                el('dash-suggestion-btn').onclick = () => profileReady ? this.goToStage(3) : this.openEditProfile();
+            }
         } else {
             const latest = this.state.sessions[0];
             let nextMode = 'technical';
@@ -2397,9 +3018,9 @@ window.app = {
                 recommendation = 'Behavioral Round';
                 reason = 'You recently did a technical round. Let\'s polish your behavioral answers.';
             } else if (latest.mode === 'hr') {
-                nextMode = 'project';
-                recommendation = 'Project Deep-Dive';
-                reason = 'Time to drill down into the specifics of your past projects.';
+                nextMode = 'behavioral';
+                recommendation = 'Behavioral Round';
+                reason = 'Build stronger evidence-based examples from your projects and experience.';
             }
 
             if (el('dash-session-suggestion-title')) el('dash-session-suggestion-title').textContent = "Start an Interview";
@@ -2430,6 +3051,7 @@ window.app = {
             if (el('dash-no-recent')) el('dash-no-recent').classList.remove('hidden');
         }
 
+        requestAnimationFrame(() => this.refreshDashboardExpanders());
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
@@ -2552,6 +3174,7 @@ window.app = {
         if (editArea && (hasFinal || hasInterim)) {
             editArea.value = this.state.transcriptState.final + this.state.transcriptState.interim;
             editArea.scrollTop = editArea.scrollHeight;
+            this.updateAnswerState();
         }
     },
 
