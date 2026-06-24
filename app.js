@@ -270,6 +270,10 @@ window.app = {
         },
         job: { description: '', link: '' },
         analysis: { matchScore: 0, difficulty: 'Moderate', strengths: [], gaps: [], topics: [] },
+        practiceReturnStage: 1,
+        pendingDeleteSessionIndex: null,
+        isReadingQuestion: false,
+        interviewMuted: false,
         interview: {
             length: 'short',
             mainTarget: 6,
@@ -357,6 +361,8 @@ window.app = {
         if (this.forms.job) {
             this.forms.job.addEventListener('submit', (e) => { e.preventDefault(); this.handleJobSubmit(); });
         }
+        window.addEventListener('scroll', () => this.updateProfileJumpState(), { passive: true });
+        window.addEventListener('resize', () => this.updateProfileJumpState());
     },
 
     populateFocusAreas() {
@@ -532,25 +538,28 @@ window.app = {
         const container = document.getElementById('prof-education-list');
         if (!container) return;
         const esc = (value) => this.escapeHTML(value || '');
+        const degreeTypes = ['High school', 'Diploma', 'Associate', 'Bachelor', 'Master', 'PhD', 'Bootcamp', 'Certification', 'Course', 'Other'];
+        const currentType = String(education.field || '').trim();
+        const typeOptions = [
+            '<option value="">Choose type</option>',
+            ...degreeTypes.map((type) => `<option value="${esc(type)}"${type === currentType ? ' selected' : ''}>${esc(type)}</option>`),
+            currentType && !degreeTypes.includes(currentType) ? `<option value="${esc(currentType)}" selected>${esc(currentType)}</option>` : ''
+        ].join('');
         const entry = document.createElement('div');
-        entry.className = 'profile-education-item border border-slate-200 rounded-xl p-4 bg-slate-50/60 space-y-4';
+        entry.className = 'profile-education-item rounded-2xl border border-[#e6edf3] bg-[#fbfcfe] p-4 space-y-4';
         entry.innerHTML = `
             <div class="flex items-center justify-between">
-                <p class="education-entry-title text-sm font-bold text-slate-800">Education</p>
-                <button type="button" onclick="window.app.removeEducationEntry(this)" class="text-xs font-semibold text-slate-400 hover:text-red-600 flex items-center gap-1" aria-label="Remove education">
+                <p class="education-entry-title text-sm font-bold text-[#111827]">Education</p>
+                <button type="button" onclick="window.app.removeEducationEntry(this)" class="profile-button-quiet !min-h-[34px] !px-2.5" aria-label="Remove education">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Remove
                 </button>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Degree or program</label><input data-key="degree" value="${esc(education.degree)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="BSc, diploma, bootcamp..."></div>
-                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Institution</label><input data-key="institution" value="${esc(education.institution)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="University or school"></div>
-                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Field of study</label><input data-key="field" value="${esc(education.field)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Computer Science, Finance..."></div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Start</label><input data-key="startDate" value="${esc(education.startDate)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="2021"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">End</label><input data-key="endDate" value="${esc(education.endDate)}" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="2025 or Present"></div>
-                </div>
+                <div><label class="profile-label mb-1.5 block">Degree title</label><input data-key="degree" value="${esc(education.degree)}" class="profile-input" placeholder="BSc Computer Science"></div>
+                <div><label class="profile-label mb-1.5 block">Institution</label><input data-key="institution" value="${esc(education.institution)}" class="profile-input" placeholder="University or school"></div>
+                <div class="md:col-span-2"><label class="profile-label mb-1.5 block">Type of degree</label><select data-key="field" class="profile-select">${typeOptions}</select></div>
             </div>
-            <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Details or achievements</label><textarea data-key="details" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm min-h-[65px]" placeholder="Honors, specialization, thesis, relevant achievements...">${esc(education.details)}</textarea></div>
+            <div><label class="profile-label mb-1.5 block">Details about it</label><textarea data-key="details" class="profile-textarea !min-h-[72px]" placeholder="Focus area, honors, thesis, relevant achievements">${esc(education.details)}</textarea></div>
         `;
         container.appendChild(entry);
         this.updateEducationEntryTitles();
@@ -588,6 +597,57 @@ window.app = {
             entry.querySelectorAll('[data-key]').forEach((field) => { item[field.dataset.key] = field.value.trim(); });
             return item;
         }).filter((item) => Object.values(item).some(Boolean));
+    },
+
+    normalizeProfileLanguage(value) {
+        return String(value || '')
+            .replace(/\s*(?:[-–—:]|\()\s*(native|fluent|professional|advanced|intermediate|conversational|basic|beginner).*$/i, '')
+            .trim();
+    },
+
+    renderProfileLanguages(items = []) {
+        const hidden = document.getElementById('prof-languages');
+        const list = document.getElementById('prof-language-list');
+        if (!hidden || !list) return;
+        const languages = (Array.isArray(items) ? items : this.splitCVList(hidden.value))
+            .map((item) => this.normalizeProfileLanguage(item))
+            .filter(Boolean);
+        const uniqueLanguages = Array.from(new Set(languages.map((item) => item.toLowerCase())))
+            .map((key) => languages.find((item) => item.toLowerCase() === key));
+        hidden.value = uniqueLanguages.join('\n');
+        list.innerHTML = languages.length
+            ? uniqueLanguages.map((language, index) => `
+                <span class="profile-language-box">
+                    ${this.escapeHTML(language)}
+                    <button type="button" class="profile-language-remove" onclick="window.app.removeProfileLanguage(${index})" aria-label="Remove ${this.escapeHTML(language)}">
+                        <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                </span>
+            `).join('')
+            : '<span class="profile-muted">Add each language as a separate box.</span>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    addLanguageFromInput() {
+        const input = document.getElementById('prof-language-input');
+        const hidden = document.getElementById('prof-languages');
+        if (!input || !hidden) return;
+        const value = this.normalizeProfileLanguage(input.value);
+        if (!value) return;
+        const languages = this.splitCVList(hidden.value);
+        if (!languages.some((item) => item.toLowerCase() === value.toLowerCase())) {
+            languages.push(value);
+        }
+        input.value = '';
+        this.renderProfileLanguages(languages);
+    },
+
+    removeProfileLanguage(index) {
+        const hidden = document.getElementById('prof-languages');
+        if (!hidden) return;
+        const languages = this.splitCVList(hidden.value);
+        languages.splice(index, 1);
+        this.renderProfileLanguages(languages);
     },
 
     getProfileCompletionSummary() {
@@ -630,7 +690,7 @@ window.app = {
         if (missingEl) {
             missingEl.innerHTML = summary.missing.length
                 ? `<span class="text-xs text-slate-400 mr-1">Helpful to add:</span>${summary.missing.map((item) => `<span class="profile-missing-item">${this.escapeHTML(item)}</span>`).join('')}`
-                : '<span class="text-xs font-semibold text-emerald-600">Profile looks complete.</span>';
+                : '<span class="text-xs font-semibold text-[#007aff]">Profile looks complete.</span>';
         }
     },
 
@@ -641,6 +701,38 @@ window.app = {
         window.setTimeout(() => field.focus(), 250);
     },
 
+    focusProfileSection(sectionId, fieldId) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        this.updateProfileJumpState(sectionId);
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(() => {
+            const field = document.getElementById(fieldId);
+            if (field && field.offsetParent !== null) field.focus();
+            this.updateProfileJumpState(sectionId);
+        }, 300);
+    },
+
+    updateProfileJumpState(activeSectionId = '') {
+        if (this.state.currentStage !== 2) return;
+        const buttons = Array.from(document.querySelectorAll('[data-profile-jump]'));
+        if (!buttons.length) return;
+        let activeId = activeSectionId;
+        const sections = Array.from(document.querySelectorAll('[data-profile-section]'));
+        if (!activeId && sections.length) {
+            const activationLine = Math.min(220, window.innerHeight * 0.35);
+            activeId = sections[0].dataset.profileSection;
+            sections.forEach((section) => {
+                if (section.getBoundingClientRect().top <= activationLine) {
+                    activeId = section.dataset.profileSection;
+                }
+            });
+        }
+        buttons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.profileJump === activeId);
+        });
+    },
+
     saveProfile(continueToSetup = false) {
         const nameEl = document.getElementById('prof-name');
         const fieldEl = document.getElementById('prof-field');
@@ -648,13 +740,12 @@ window.app = {
         const coursesEl = document.getElementById('prof-courses');
         const projectsEl = document.getElementById('prof-projects');
         const experienceEl = document.getElementById('prof-experience');
-        const linkedinEl = document.getElementById('prof-linkedin');
         const targetRoleEl = document.getElementById('prof-target-role');
         const locationEl = document.getElementById('prof-location');
-        const phoneEl = document.getElementById('prof-phone');
         const summaryEl = document.getElementById('prof-summary');
-        const certificationsEl = document.getElementById('prof-certifications');
         const languagesEl = document.getElementById('prof-languages');
+        const pendingLanguageEl = document.getElementById('prof-language-input');
+        if (pendingLanguageEl?.value.trim()) this.addLanguageFromInput();
         
         this.state.user.name = nameEl ? nameEl.value.trim() : '';
         this.state.user.field = fieldEl ? fieldEl.value.trim() : 'Software Engineering';
@@ -662,25 +753,25 @@ window.app = {
         this.state.user.courses = coursesEl ? coursesEl.value.trim() : '';
         this.state.user.projects = projectsEl ? projectsEl.value.trim() : '';
         this.state.user.experience = experienceEl ? experienceEl.value.trim() : '';
-        this.state.user.linkedin = linkedinEl ? linkedinEl.value.trim() : '';
         this.state.user.targetRole = targetRoleEl ? targetRoleEl.value.trim() : '';
         this.state.user.location = locationEl ? locationEl.value.trim() : '';
-        this.state.user.phone = phoneEl ? phoneEl.value.trim() : '';
         this.state.user.summary = summaryEl ? summaryEl.value.trim() : '';
-        this.state.user.certifications = certificationsEl ? certificationsEl.value.trim() : '';
         this.state.user.languages = languagesEl ? languagesEl.value.trim() : '';
 
         const cvData = this.normalizeCVData(this.state.user.cvData || {});
         cvData.targetRole = this.state.user.targetRole;
         cvData.location = this.state.user.location;
-        cvData.phone = this.state.user.phone;
         cvData.summary = this.state.user.summary;
         cvData.education = this.collectProfileEducation();
         cvData.relevantCourses = this.splitCVList(this.state.user.courses);
         const structuredSkillNames = new Set(Object.values(cvData.skills).flat().map((skill) => skill.toLowerCase()));
         const additionalSkills = this.splitCVList(this.state.user.skills).filter((skill) => !structuredSkillNames.has(skill.toLowerCase()));
         cvData.skills.other = [...cvData.skills.other, ...additionalSkills];
-        cvData.certifications = this.splitCVList(this.state.user.certifications);
+        cvData.certifications = cvData.education
+            .filter((item) => String(item.field || '').toLowerCase() === 'certification')
+            .map((item) => item.degree)
+            .filter(Boolean);
+        this.state.user.certifications = cvData.certifications.join('\n');
         cvData.languages = this.splitCVList(this.state.user.languages);
         this.state.user.cvData = cvData;
         
@@ -697,14 +788,11 @@ window.app = {
         const coursesEl = document.getElementById('prof-courses');
         const projectsEl = document.getElementById('prof-projects');
         const experienceEl = document.getElementById('prof-experience');
-        const linkedinEl = document.getElementById('prof-linkedin');
         const cvData = this.normalizeCVData(this.state.user.cvData || {});
         const extraFields = {
             'prof-target-role': this.state.user.targetRole || cvData.targetRole,
             'prof-location': this.state.user.location || cvData.location,
-            'prof-phone': this.state.user.phone || cvData.phone,
             'prof-summary': this.state.user.summary || cvData.summary,
-            'prof-certifications': this.state.user.certifications || cvData.certifications.join('\n'),
             'prof-languages': this.state.user.languages || cvData.languages.join('\n')
         };
 
@@ -714,12 +802,24 @@ window.app = {
         if (coursesEl) coursesEl.value = this.state.user.courses || '';
         if (projectsEl) projectsEl.value = this.state.user.projects || cvData.projects.map((item) => [item.name, item.role, item.description, item.technologies?.join(', '), item.impact].filter(Boolean).join(' — ')).join('\n');
         if (experienceEl) experienceEl.value = this.state.user.experience || '';
-        if (linkedinEl) linkedinEl.value = this.state.user.linkedin || '';
         Object.entries(extraFields).forEach(([id, value]) => {
             const element = document.getElementById(id);
             if (element) element.value = value || '';
         });
-        this.renderProfileEducation(cvData.education);
+        const certificationEducation = cvData.certifications.map((name) => ({
+            degree: name,
+            institution: '',
+            field: 'Certification',
+            startDate: '',
+            endDate: '',
+            details: ''
+        }));
+        const educationItems = [
+            ...cvData.education,
+            ...certificationEducation.filter((cert) => !cvData.education.some((item) => item.degree === cert.degree && item.field === 'Certification'))
+        ];
+        this.renderProfileEducation(educationItems);
+        this.renderProfileLanguages(this.splitCVList(document.getElementById('prof-languages')?.value || ''));
         this.renderProfileSummary();
         
         this.goToStage(2);
@@ -748,12 +848,14 @@ window.app = {
         if (pastePanel) pastePanel.classList.toggle('hidden', isUpload);
         
         if (tabUpload) {
+            tabUpload.classList.toggle('is-active', isUpload);
             tabUpload.classList.toggle('border-brand-500', isUpload);
             tabUpload.classList.toggle('text-brand-600', isUpload);
             tabUpload.classList.toggle('border-transparent', !isUpload);
             tabUpload.classList.toggle('text-slate-400', !isUpload);
         }
         if (tabPaste) {
+            tabPaste.classList.toggle('is-active', !isUpload);
             tabPaste.classList.toggle('border-brand-500', !isUpload);
             tabPaste.classList.toggle('text-brand-600', !isUpload);
             tabPaste.classList.toggle('border-transparent', isUpload);
@@ -1027,17 +1129,26 @@ window.app = {
         const allSkills = Object.values(parsed.skills).flat().join(', ');
         const experienceText = parsed.experience.map((item) => [item.title, item.organization, [item.startDate, item.endDate].filter(Boolean).join(' – '), item.description, item.skillsUsed.join(', ')].filter(Boolean).join(' | ')).join('\n');
         const projectText = parsed.projects.map((item) => [`Project: ${item.name}`, item.role, item.description, item.technologies.join(', '), item.impact].filter(Boolean).join(' | ')).join('\n');
+        parsed.education = [
+            ...parsed.education,
+            ...parsed.certifications.map((name) => ({
+                degree: name,
+                institution: '',
+                field: 'Certification',
+                startDate: '',
+                endDate: '',
+                details: ''
+            }))
+        ];
         const fields = [
             { id: 'prof-name', value: parsed.name, confidence: confidence.name, stateKey: 'name' },
             { id: 'prof-target-role', value: parsed.targetRole, confidence: 'medium', stateKey: 'targetRole' },
             { id: 'prof-location', value: parsed.location, confidence: 'medium', stateKey: 'location' },
-            { id: 'prof-phone', value: parsed.phone, confidence: 'medium', stateKey: 'phone' },
             { id: 'prof-summary', value: parsed.summary, confidence: 'medium', stateKey: 'summary' },
             { id: 'prof-skills', value: allSkills, confidence: confidence.skills, stateKey: 'skills' },
             { id: 'prof-courses', value: parsed.relevantCourses.join(', '), confidence: confidence.education, stateKey: 'courses' },
             { id: 'prof-projects', value: projectText, confidence: confidence.projects, stateKey: 'projects' },
             { id: 'prof-experience', value: experienceText, confidence: confidence.experience, stateKey: 'experience' },
-            { id: 'prof-certifications', value: parsed.certifications.join('\n'), confidence: 'medium', stateKey: 'certifications' },
             { id: 'prof-languages', value: parsed.languages.join('\n'), confidence: 'medium', stateKey: 'languages' }
         ];
         const saved = [];
@@ -1062,6 +1173,7 @@ window.app = {
         this.state.user.cvData = parsed;
         saved.push('cvData');
         this.renderProfileEducation(parsed.education);
+        this.renderProfileLanguages(parsed.languages);
         this.saveUserData();
         this.debugCV('fields saved to profile', saved);
         this.debugCV('fields skipped because of low confidence or empty values', skipped);
@@ -1403,12 +1515,9 @@ window.app = {
         const pill = document.getElementById('user-pill');
         const pillName = document.getElementById('pill-name');
         const pillInitials = document.getElementById('pill-initials');
-        const navAvatar = document.getElementById('nav-user-avatar');
         
         const name = this.state.user.name || (this.state.isGuest ? 'Guest User' : '');
         const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'U';
-
-        if (navAvatar) navAvatar.textContent = initials;
 
         if (this.state.isGuest) {
             if (pillName) pillName.textContent = 'Hi, Guest!';
@@ -1531,8 +1640,9 @@ window.app = {
         }
         const mobileNav = document.getElementById('mobile-nav');
         if (mobileNav) {
-            mobileNav.classList.toggle('hidden', stageNum === 0);
-            mobileNav.classList.toggle('flex', stageNum !== 0);
+            const hideMobileNav = stageNum === 0 || stageNum === 1 || stageNum === 2 || stageNum === 6 || stageNum === 8;
+            mobileNav.classList.toggle('hidden', hideMobileNav);
+            mobileNav.classList.toggle('flex', !hideMobileNav);
         }
         document.querySelectorAll('[data-nav-stage]').forEach((link) => {
             link.classList.toggle('active', Number(link.dataset.navStage) === stageNum);
@@ -1540,6 +1650,11 @@ window.app = {
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
         
+        if (stageNum === 2) window.setTimeout(() => this.updateProfileJumpState(), 150);
+        if (stageNum === 7 && !this.state.currentPracticeFocus) {
+            if (!Number.isInteger(this.state.activePracticeSessionIndex)) this.state.activePracticeSessionIndex = 0;
+            window.setTimeout(() => this.startPractice(), 0);
+        }
         if (stageNum === 8) this.showHistory();
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -2234,6 +2349,7 @@ window.app = {
     setInterviewStatus(message, isLoading = false) {
         const status = document.querySelector('#int-ai-state span');
         const container = document.getElementById('int-ai-state');
+        if (!status && !container) return;
         if (status) status.textContent = message;
         container?.classList.toggle('animate-pulse', isLoading);
     },
@@ -2292,12 +2408,14 @@ window.app = {
     askQuestion() {
         const qText = document.getElementById('interviewer-question-text');
         const counter = document.getElementById('int-q-counter');
-        const typeLabel = document.getElementById('int-type-label');
         const questionKind = document.getElementById('int-question-kind');
         const stageLabel = document.getElementById('int-stage-label');
         const nextBtn = document.getElementById('int-submit-btn');
         const editArea = document.getElementById('int-answer-area');
         const skipButton = document.getElementById('int-skip-btn');
+        const muteBtn = document.getElementById('int-mute-btn');
+        this.state.isReadingQuestion = false;
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
 
         const currentQ = this.state.interview.questions[this.state.interview.currentQuestionIndex];
         const currentMeta = this.state.interview.questionMeta[this.state.interview.currentQuestionIndex] || {};
@@ -2316,23 +2434,18 @@ window.app = {
                 ? `Question ${count} of ${count}`
                 : `Question ${count} of up to ${this.state.interview.maxQuestions}`;
         }
-        if (typeLabel) {
-            const labels = { hr: 'HR interview', technical: 'Technical interview', behavioral: 'Behavioral interview', situational: 'Situational interview', mixed: 'Mixed final round' };
-            typeLabel.textContent = labels[this.state.interviewMode] || `${this.state.interviewMode} interview`;
-        }
         if (questionKind) {
             const kinds = { follow_up: 'Follow-up on your answer', technical: 'Job-specific topic', behavioral: 'Behavioral topic', situational: 'Situational scenario', role_fit: 'Role-fit topic', experience: 'From your profile', closing: 'Closing question', opening: 'Opening question' };
             const topic = currentMeta.topic || this.state.interview.currentTopic;
-            questionKind.textContent = currentMeta.isFollowUp
+            const label = currentMeta.isFollowUp
                 ? `Follow-up${topic ? ` · ${topic}` : ''}`
-                : (topic || kinds[this.state.interview.currentQuestionType] || 'New topic');
+                : (this.state.interview.currentStage === 'opening' ? '' : (topic || kinds[this.state.interview.currentQuestionType] || 'New topic'));
+            questionKind.textContent = label;
+            questionKind.classList.toggle('hidden', !label);
         }
         if (stageLabel) stageLabel.textContent = this.interviewStageLabel(this.state.interview.currentStage);
         const reason = document.getElementById('int-question-reason');
         if (reason) reason.textContent = this.state.interview.currentQuestionReason || currentMeta.reason || 'This question checks your fit for the role.';
-        const headerLength = document.getElementById('int-header-length');
-        if (headerLength) headerLength.textContent = this.getInterviewConfig(this.state.interview.length).label;
-
         if (nextBtn) {
             delete nextBtn.dataset.loading;
             nextBtn.disabled = true;
@@ -2344,16 +2457,65 @@ window.app = {
             editArea.focus();
         }
         if (skipButton) skipButton.disabled = false;
+        if (muteBtn) {
+            muteBtn.innerHTML = this.state.interviewMuted
+                ? '<i data-lucide="volume-2" class="w-4 h-4"></i> Sound on'
+                : '<i data-lucide="volume-2" class="w-4 h-4"></i> Sound off';
+        }
         document.getElementById('int-clarification-panel')?.classList.add('hidden');
         this.updateAnswerState();
         this.setInterviewStatus(currentMeta.isFollowUp ? 'Follow-up based on your previous answer' : `New ${this.interviewStageLabel(this.state.interview.currentStage).toLowerCase()} topic`);
 
         this.updateInterviewProgress();
+        if (!this.state.interviewMuted && currentQ) {
+            window.setTimeout(() => {
+                if (this.state.interview.questions[this.state.interview.currentQuestionIndex] === currentQ && !this.state.interviewMuted) {
+                    this.speak(currentQ);
+                }
+            }, 450);
+        }
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     showAIBridge(data, callback) {
         if (callback) callback();
+    },
+
+    toggleQuestionReadAloud() {
+        const button = document.getElementById('int-read-aloud-btn');
+        const question = this.state.interview.questions[this.state.interview.currentQuestionIndex] || document.getElementById('interviewer-question-text')?.textContent || '';
+        if (!question || this.state.interviewMuted) return;
+
+        if (this.state.isReadingQuestion || (window.speechSynthesis && window.speechSynthesis.speaking)) {
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            this.state.isReadingQuestion = false;
+            if (button) button.innerHTML = '<i data-lucide="volume-2" class="w-4 h-4"></i> Read aloud';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            return;
+        }
+
+        this.state.isReadingQuestion = true;
+        if (button) button.innerHTML = '<i data-lucide="volume-x" class="w-4 h-4"></i> Stop';
+        this.speak(question, () => {
+            this.state.isReadingQuestion = false;
+            if (button) button.innerHTML = '<i data-lucide="volume-2" class="w-4 h-4"></i> Read aloud';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    toggleInterviewMute() {
+        this.state.interviewMuted = !this.state.interviewMuted;
+        this.state.isReadingQuestion = false;
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        const button = document.getElementById('int-mute-btn');
+        if (button) {
+            button.innerHTML = this.state.interviewMuted
+                ? '<i data-lucide="volume-2" class="w-4 h-4"></i> Sound on'
+                : '<i data-lucide="volume-2" class="w-4 h-4"></i> Sound off';
+        }
+        this.setInterviewStatus(this.state.interviewMuted ? 'Speech muted' : 'Speech on');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     completeInterview() {
@@ -2395,14 +2557,22 @@ window.app = {
     localStageQuestion(stage) {
         const role = this.state.user.targetRole || this.state.user.field || 'this role';
         const skill = this.splitCVList(this.state.user.skills)[0] || 'your core skills';
-        const experience = this.state.user.cvData?.projects?.[0]?.name || this.state.user.cvData?.experience?.[0]?.title || 'a relevant project or experience';
+        const projectNote = this.splitCVList(this.state.user.projects)[0];
+        const experienceNote = this.splitCVList(this.state.user.experience)[0];
+        const education = this.state.user.cvData?.education?.[0]?.degree || this.state.user.courses;
+        const experience = this.state.user.cvData?.projects?.[0]?.name
+            || projectNote
+            || this.state.user.cvData?.experience?.[0]?.title
+            || experienceNote
+            || education
+            || 'a relevant project or experience';
         const questions = {
-            opening: `Give me a brief introduction to your background and explain which experience best prepares you for ${role}.`,
-            role_fit: `Which responsibility in this ${role} opportunity would be most important for you to master first, and why?`,
-            experience: `Walk me through ${experience}. What did you personally own, and what result did it produce?`,
-            behavioral: `Tell me about a time you had to solve a difficult problem with other people. What was your contribution and the outcome?`,
-            technical: `How would you apply ${skill} to solve a realistic problem in this ${role} position? Explain your approach and trade-offs.`,
-            closing: `Based on the requirements and your background, why are you a strong fit for this ${role} opportunity?`
+            opening: `I noticed your profile is aimed at ${role}. Give me a brief introduction, and connect it to the experience you think matters most for this role.`,
+            role_fit: `Looking at your background, what part of the ${role} responsibilities do you already have evidence for, and where would you need to ramp up fastest?`,
+            experience: `I saw ${experience} in your profile. Walk me through what you personally owned, the decisions you made, and the result.`,
+            behavioral: `Tell me about a time one of your profile experiences required teamwork or handling pressure. What happened, what did you do, and what changed because of it?`,
+            technical: `You listed ${skill}. How have you used it in a real project or course, and what trade-offs did you have to think through?`,
+            closing: `Based on your profile and the role requirements, what is the strongest evidence that you are ready for this ${role} opportunity?`
         };
         return questions[stage] || questions.role_fit;
     },
@@ -2599,6 +2769,7 @@ window.app = {
                 requirementsToPractice: report.job_requirements_to_practice || [],
                 recommendedPracticeQuestions: report.recommended_practice_questions || [],
                 skippedQuestions: this.state.interview.skippedQuestions || [],
+                responses: JSON.parse(JSON.stringify(this.state.interview.responses || [])),
                 scoringSummary: report.scoring_summary || '',
                 finalRecommendation: report.final_recommendation || ''
             };
@@ -2656,83 +2827,243 @@ window.app = {
         if (el('rep-summary')) {
             const summary = String(report.summary || report.finalRecommendation || 'A clear summary of how you performed, what matters most, and what to practice next.').trim();
             const firstLine = summary.split(/(?<=[.!?])\s+/)[0];
-            el('rep-summary').textContent = firstLine.length > 180 ? `${firstLine.slice(0, 177).trim()}…` : firstLine;
+            const hideLowEvidenceLine = /not enough evidence in the transcript to judge performance/i.test(firstLine);
+            el('rep-summary').textContent = hideLowEvidenceLine ? '' : (firstLine.length > 130 ? `${firstLine.slice(0, 127).trim()}...` : firstLine);
         }
         renderBulletList('rep-top-strength', report.strengths?.length ? report.strengths : [report.top_strength], 'No clear strength yet.');
         renderBulletList('rep-main-improvement', report.improvements?.length ? report.improvements : [report.main_improvement], 'No clear improvement area yet.');
-        renderBulletList('rep-next-practice', report.recommended_practice_questions?.length ? report.recommended_practice_questions : report.actionPlan, 'Practice the weakest answer again with more detail.');
-
-        const actionPlan = el('rep-action-plan');
-        if (actionPlan) {
-            actionPlan.innerHTML = (report.actionPlan || report.improvements || []).slice(0, 3).map((item) => `
-                <li class="flex gap-2 items-start">
-                    <i data-lucide="arrow-right-circle" class="w-4 h-4 text-brand-500 mt-0.5 shrink-0"></i>
-                    <span>${this.escapeHTML(item)}</span>
-                </li>
-            `).join('') || '<li class="text-slate-400">No action plan available yet.</li>';
-        }
 
         const qReviewContainer = el('rep-q-review');
         if (qReviewContainer) {
-            const reviews = report.questionReviews || [];
-            qReviewContainer.innerHTML = reviews.length ? reviews.map((review, i) => `
-                <article class="report-question-card space-y-4">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="space-y-2">
-                            <p class="text-xs font-bold text-brand-600">Question ${i + 1}</p>
-                            <p class="text-[15px] font-bold text-slate-900 leading-relaxed">${this.escapeHTML(review.question)}</p>
+            const items = this.buildReportQuestionItems(report);
+            qReviewContainer.innerHTML = items.length ? items.map((item, i) => {
+                if (item.status === 'skipped') {
+                    const goodAnswer = this.buildSkippedAnswerExample(item, report);
+                    return `
+                        <article class="report-question-card report-question-card--skipped">
+                            <div class="report-question-top">
+                                <div>
+                                    <p class="report-question-meta">Question ${i + 1}</p>
+                                    <p class="report-question-text">${this.escapeHTML(item.question)}</p>
+                                </div>
+                                <span class="report-score-chip report-score-chip--skipped shrink-0">Skipped</span>
+                            </div>
+                            <p class="report-skipped-note"><i data-lucide="circle-dashed"></i><span>No answer was given, so this question was not scored.</span></p>
+                            <details class="report-example">
+                                <summary class="report-answer-toggle cursor-pointer list-none" style="font-size:0.95rem; font-weight:700; color:#172033;">
+                                    <span>Good answer example</span>
+                                    <i data-lucide="chevron-down" style="width:1rem; height:1rem; transition:transform 0.18s ease; color:#86868b;"></i>
+                                </summary>
+                                <p style="margin-top:1rem; font-size:0.95rem; color:#273446; line-height:1.6;">${this.escapeHTML(goodAnswer)}</p>
+                            </details>
+                        </article>
+                    `;
+                }
+                const review = item.review;
+                return `
+                    <article class="report-question-card">
+                        <div class="report-question-top">
+                            <div>
+                                <p class="report-question-meta">Question ${i + 1}</p>
+                                <p class="report-question-text">${this.escapeHTML(review.question)}</p>
+                            </div>
+                            <span class="report-score-chip shrink-0">${this.escapeHTML(review.score)}/10</span>
                         </div>
-                        <span class="report-score-chip shrink-0">${this.escapeHTML(review.score)}/10</span>
-                    </div>
-                    <div>
-                        <p class="text-xs font-bold text-slate-500 mb-2">Your answer</p>
-                        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-sm text-slate-700 leading-relaxed">
-                            ${this.escapeHTML(review.answer)}
+                        <div>
+                            <p style="font-size:0.85rem; font-weight:600; color:#86868b; margin-bottom:0.75rem;">Your answer</p>
+                            <div class="report-answer-box">
+                                ${this.escapeHTML(review.answer)}
+                            </div>
                         </div>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-3 text-sm">
-                        <div class="report-feedback-soft report-feedback-soft--positive">
-                            <p class="text-xs font-bold text-emerald-700 mb-2">What went well</p>
-                            <ul class="space-y-2 text-slate-700">
-                                ${(splitIntoBullets(review.what_went_well).length ? splitIntoBullets(review.what_went_well) : ['No clear strength was demonstrated yet.']).map((item) => `<li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"></span><span>${this.escapeHTML(item)}</span></li>`).join('')}
-                            </ul>
+                        <div class="report-two-col">
+                            <div class="report-feedback-soft report-feedback-soft--positive">
+                                <p style="font-size:0.85rem; font-weight:700; color:#007aff; margin-bottom:0.75rem;">Strengths</p>
+                                <ul class="report-bullet-list">
+                                    ${(splitIntoBullets(review.what_went_well).length ? splitIntoBullets(review.what_went_well) : ['No clear strength was demonstrated yet.']).map((point) => `<li><span class="report-bullet-dot report-bullet-dot--positive"></span><span>${this.escapeHTML(point)}</span></li>`).join('')}
+                                </ul>
+                            </div>
+                            <div class="report-feedback-soft report-feedback-soft--improve">
+                                <p style="font-size:0.85rem; font-weight:700; color:#6e7bff; margin-bottom:0.75rem;">To improve</p>
+                                <ul class="report-bullet-list">
+                                    ${(splitIntoBullets(review.what_to_improve).length ? splitIntoBullets(review.what_to_improve) : ['Add a clearer example and outcome.']).map((point) => `<li><span class="report-bullet-dot report-bullet-dot--improve"></span><span>${this.escapeHTML(point)}</span></li>`).join('')}
+                                </ul>
+                            </div>
                         </div>
-                        <div class="report-feedback-soft report-feedback-soft--improve">
-                            <p class="text-xs font-bold text-orange-700 mb-2">What to improve</p>
-                            <ul class="space-y-2 text-slate-700">
-                                ${(splitIntoBullets(review.what_to_improve).length ? splitIntoBullets(review.what_to_improve) : ['Add a clearer example and outcome.']).map((item) => `<li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0"></span><span>${this.escapeHTML(item)}</span></li>`).join('')}
-                            </ul>
-                        </div>
-                    </div>
-                    <details class="rounded-xl border border-indigo-100 bg-indigo-50/55 p-4">
-                        <summary class="report-answer-toggle cursor-pointer list-none text-sm font-semibold text-brand-700">
-                            <span>Better answer</span>
-                            <i data-lucide="chevron-down" class="report-chevron w-4 h-4 shrink-0 transition-transform"></i>
-                        </summary>
-                        <p class="mt-3 text-sm text-slate-700 leading-relaxed">${this.escapeHTML(review.better_answer_example)}</p>
-                    </details>
-                </article>
-            `).join('') : '<div class="text-sm text-slate-500">No answered questions were available to review.</div>';
+                        <details class="report-example">
+                            <summary class="report-answer-toggle cursor-pointer list-none" style="font-size:0.95rem; font-weight:700; color:#172033;">
+                                <span>Better answer example</span>
+                                <i data-lucide="chevron-down" style="width:1rem; height:1rem; transition:transform 0.18s ease; color:#86868b;"></i>
+                            </summary>
+                            <p style="margin-top:1rem; font-size:0.95rem; color:#273446; line-height:1.6;">${this.escapeHTML(review.better_answer_example)}</p>
+                        </details>
+                    </article>
+                `;
+            }).join('') : '<div class="text-sm text-slate-500">No questions were available to review.</div>';
         }
 
         this.renderReportDetails(report);
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
+    buildReportQuestionItems(report) {
+        const reviews = [...(report.questionReviews || [])];
+        const responses = Array.isArray(report.responses) ? report.responses : [];
+        if (responses.length) {
+            let reviewIndex = 0;
+            return responses
+                .filter((response) => response?.question)
+                .map((response) => {
+                    if (response.status === 'skipped') {
+                        return {
+                            status: 'skipped',
+                            question: response.question,
+                            stage: response.stage,
+                            topic: response.topic,
+                            jobRequirement: response.jobRequirement
+                        };
+                    }
+                    const review = reviews[reviewIndex++] || {
+                        question: response.question,
+                        answer: response.answer,
+                        score: '--',
+                        what_went_well: '',
+                        what_to_improve: '',
+                        better_answer_example: ''
+                    };
+                    return { status: 'answered', review };
+                });
+        }
+
+        return [
+            ...reviews.map((review) => ({ status: 'answered', review })),
+            ...(report.skippedQuestions || []).map((item) => ({
+                status: 'skipped',
+                question: item.question,
+                stage: item.stage,
+                topic: item.topic,
+                jobRequirement: item.jobRequirement
+            }))
+        ];
+    },
+
+    buildSkippedAnswerExample(item, report = {}) {
+        const user = this.state.user || {};
+        const cvData = this.normalizeCVData(user.cvData || {});
+        const role = user.targetRole || report.targetRole || user.field || report.field || 'this role';
+        const skills = [
+            ...this.splitCVList(user.skills),
+            ...Object.values(cvData.skills || {}).flat()
+        ].filter(Boolean);
+        const projects = [
+            ...this.splitCVList(user.projects),
+            ...(cvData.projects || []).map((project) => project.name || project.description).filter(Boolean)
+        ];
+        const experience = [
+            ...this.splitCVList(user.experience),
+            ...(cvData.experience || []).map((entry) => entry.title || entry.description).filter(Boolean)
+        ];
+        const evidence = projects[0] || experience[0] || user.summary || cvData.summary || '';
+        const skillText = skills.slice(0, 2).join(' and ') || item.topic || item.jobRequirement || 'the required skills';
+        const evidenceText = evidence
+            ? `For example, in ${evidence.split(/\n|\||—|-/)[0].trim()}, I used ${skillText} to understand the problem, take ownership of my part, and explain the result clearly.`
+            : `For example, I would choose one relevant project, explain my responsibility, the action I took, and the result.`;
+
+        return `A strong answer would connect directly to ${role}: ${evidenceText} I would finish by linking that example back to what this role needs and what I can contribute next.`;
+    },
+
     renderReportDetails(report) {
-        const renderList = (id, items, emptyText) => {
+        const cleanFitText = (value) => {
+            const text = String(value || '').trim();
+            if (!text) return '';
+            return text
+                .replace(/^Target role:\s*/i, '')
+                .replace(/\s+in your skills$/i, '')
+                .replace(/^Stronger evidence for\s+/i, '')
+                .replace(/^Interview evidence for\s+/i, '')
+                .replace(/^Add one profile example for\s+/i, 'Example: ')
+                .replace(/^Fill the biggest gap:\s*/i, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+        const compactItems = (items) => {
+            const seen = new Set();
+            return (items || [])
+                .map((item) => cleanFitText(item))
+                .filter(Boolean)
+                .filter((item) => {
+                    const key = item.toLowerCase();
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                })
+                .slice(0, 3);
+        };
+        const renderFitList = (id, items, emptyText) => {
             const container = document.getElementById(id);
             if (!container) return;
-            container.innerHTML = (items || []).length
-                ? items.map((item) => `<li class="flex gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-brand-500 mt-0.5 shrink-0"></i><span>${this.escapeHTML(item)}</span></li>`).join('')
-                : `<li class="text-slate-400">${emptyText}</li>`;
+            const compact = compactItems(items);
+            container.innerHTML = compact.length
+                ? compact.map((item) => `<li>${this.escapeHTML(item)}</li>`).join('')
+                : `<li class="is-empty">${emptyText}</li>`;
         };
-        renderList('rep-requirements-covered', report.requirementsCovered, 'No requirement had enough evidence yet.');
-        renderList('rep-requirements-practice', report.requirementsToPractice, 'No additional requirement was identified.');
-        const skipped = document.getElementById('rep-skipped-questions');
-        if (skipped) skipped.innerHTML = (report.skippedQuestions || []).length
-            ? report.skippedQuestions.map((item, index) => `<div class="p-3 bg-slate-50 border border-slate-100 rounded-xl"><p class="text-xs font-bold text-slate-400 mb-1">Skipped ${index + 1} · ${this.escapeHTML(this.interviewStageLabel(item.stage))}</p><p>${this.escapeHTML(item.question)}</p></div>`).join('')
-            : '<p class="text-slate-400">No questions were skipped.</p>';
+        const profileFit = this.buildReportProfileFit(report);
+        renderFitList('rep-fit-ready', profileFit.have, 'No clear match yet');
+        renderFitList('rep-fit-gaps', profileFit.missing, 'No major gap');
+    },
+
+    buildReportProfileFit(report) {
+        const user = this.state.user || {};
+        const cvData = this.normalizeCVData(user.cvData || {});
+        const skills = [
+            ...this.splitCVList(user.skills),
+            ...Object.values(cvData.skills || {}).flat()
+        ].filter(Boolean);
+        const projects = [
+            ...this.splitCVList(user.projects),
+            ...(cvData.projects || []).map((item) => item.name || item.description).filter(Boolean)
+        ];
+        const experience = [
+            ...this.splitCVList(user.experience),
+            ...(cvData.experience || []).map((item) => item.title || item.description).filter(Boolean)
+        ];
+        const profileEducation = this.collectProfileEducation();
+        const education = (cvData.education || []).length ? cvData.education : profileEducation;
+        const languages = this.splitCVList(user.languages || cvData.languages?.join('\n'));
+        const requirementsToPractice = report.requirementsToPractice || [];
+        const requirementsCovered = report.requirementsCovered || [];
+        const technicalGaps = report.technicalGaps || [];
+        const targetRole = user.targetRole || report.targetRole || user.field || report.field || '';
+
+        const have = [];
+        if (skills.length) have.push(skills.slice(0, 3).join(', '));
+        if (projects.length) have.push('Projects');
+        if (experience.length) have.push('Experience');
+        if (targetRole) have.push(targetRole);
+        if (education.length) have.push('Education');
+        if (languages.length) have.push(languages.slice(0, 2).join(', '));
+        requirementsCovered.slice(0, 1).forEach((item) => have.push(item));
+
+        const missing = [];
+        if (!targetRole) missing.push('Target role');
+        if (!user.summary && !cvData.summary) missing.push('Short summary');
+        if (!skills.length) missing.push('Skills');
+        if (!projects.length) missing.push('Projects');
+        if (projects.length && projects.every((item) => !/\d|impact|result|improved|reduced|increased/i.test(item))) missing.push('Project results');
+        if (!experience.length) missing.push('Experience');
+        if (!education.length) missing.push('Education');
+        requirementsToPractice.slice(0, 2).forEach((item) => missing.push(item));
+        technicalGaps.slice(0, 1).forEach((item) => missing.push(item));
+
+        const next = [];
+        if (requirementsToPractice.length) next.push(`Example: ${requirementsToPractice[0]}`);
+        if (!projects.length || projects.every((item) => !/\d|impact|result|improved|reduced|increased/i.test(item))) {
+            next.push('Project result');
+        }
+        if (!user.summary && !cvData.summary) next.push('Role summary');
+        if (skills.length && projects.length) next.push('Skill-to-project link');
+        if (!next.length && missing.length) next.push(missing[0]);
+
+        return { have, missing, next };
     },
 
     handleReportContinue() {
@@ -2763,7 +3094,9 @@ window.app = {
             date: new Date().toLocaleDateString(),
             mode: this.state.interviewMode,
             score: aiReport.score,
-            field: this.state.user.field,
+            field: this.state.user.targetRole || this.state.user.field,
+            jobDescription: this.state.job.description || '',
+            targetRole: this.state.user.targetRole || this.state.user.field || '',
             strengths: aiReport.strengths || [],
             weaknesses: aiReport.improvements || [],
             actionPlan: aiReport.actionPlan || [],
@@ -2786,41 +3119,168 @@ window.app = {
     },
 
     // --- Practice ---
-    async startPractice() {
+    getPracticeCategories() {
+        return [
+            {
+                type: 'category',
+                key: 'intro',
+                title: 'Intro',
+                source: 'Interview start',
+                improvement: 'Practice a clear 60-second introduction tied to the role.'
+            },
+            {
+                type: 'category',
+                key: 'role_fit',
+                title: 'Role fit',
+                source: 'Role match',
+                improvement: 'Connect your background to the role requirements.'
+            },
+            {
+                type: 'category',
+                key: 'cv',
+                title: 'CV',
+                source: 'Profile',
+                improvement: 'Explain your projects, skills, and experience with evidence.'
+            },
+            {
+                type: 'category',
+                key: 'behavioral',
+                title: 'Behavioral',
+                source: 'Soft skills',
+                improvement: 'Use a real example with situation, action, and result.'
+            },
+            {
+                type: 'category',
+                key: 'technical',
+                title: 'Technical',
+                source: 'Job skills',
+                improvement: 'Show depth in the skills required for this role.'
+            },
+            {
+                type: 'category',
+                key: 'closing',
+                title: 'Closing',
+                source: 'Final answer',
+                improvement: 'Practice a strong final fit answer or thoughtful question.'
+            }
+        ];
+    },
+
+    practiceSession(index) {
+        if (!this.state.sessions[index]) return;
+        this.state.activePracticeSessionIndex = index;
+        this.state.currentPracticeFocus = null;
+        this.state.currentPracticeFocusIndex = null;
+        this.startPractice();
+    },
+
+    recommendedPracticeCategoryIndex(session = this.state.sessions[0]) {
+        if (!session) return 0;
+        const scores = session.dimensionScores || {};
+        const entries = Object.entries(scores)
+            .filter(([, score]) => Number.isFinite(Number(score)))
+            .sort((a, b) => Number(a[1]) - Number(b[1]));
+        const weakest = entries[0]?.[0] || '';
+        if (weakest === 'technical_depth' || (session.technicalGaps || []).length) return 4;
+        if (weakest === 'role_relevance' || (session.requirementsToPractice || []).length) return 1;
+        if (weakest === 'evidence_and_impact') return 2;
+        if (weakest === 'answer_structure' || weakest === 'communication_clarity') return 0;
+        return 0;
+    },
+
+    getActivePracticeSession() {
+        const index = Number.isInteger(this.state.activePracticeSessionIndex) ? this.state.activePracticeSessionIndex : 0;
+        return this.state.sessions[index] || this.state.sessions[0] || null;
+    },
+
+    buildPracticeFocusOptions(session = this.getActivePracticeSession()) {
+        const role = session?.targetRole || session?.field || this.state.user.targetRole || this.state.user.field || 'your role';
+        const requirement = session?.requirementsToPractice?.[0] || session?.technicalGaps?.[0] || '';
+        return this.getPracticeCategories().map((category) => ({
+            ...category,
+            role,
+            requirement,
+            jobDescription: session?.jobDescription || this.state.job.description || '',
+            interviewMode: session?.mode || this.state.interviewMode
+        }));
+    },
+
+    renderPracticeFocusOptions(options, activeIndex = 0) {
+        const list = document.getElementById('practice-focus-list');
+        if (!list) return;
+        list.innerHTML = options.map((option, index) => `
+            <button type="button" onclick="window.app.startPractice(${index}, true)" class="practice-focus-chip ${index === activeIndex ? 'is-active' : ''}">
+                <span>${this.escapeHTML(option.title)}</span>
+            </button>
+        `).join('');
+    },
+
+    buildLocalPracticeQuestion(focus) {
+        const role = focus.role || this.state.user.targetRole || this.state.user.field || 'this role';
+        const skill = focus.requirement || this.splitCVList(this.state.user.skills)[0] || 'a relevant skill';
+        const questions = {
+            intro: `Give me a short introduction and connect your background to ${role}.`,
+            role_fit: `Why are you a strong fit for ${role}, and what evidence from your background proves it?`,
+            cv: `Walk me through one project or experience from your CV that matters for ${role}.`,
+            behavioral: `Tell me about a time you handled a challenge with a team. What did you do?`,
+            technical: `How have you used ${skill} in a real project, and what trade-off did you make?`,
+            closing: `What is one thoughtful question you would ask at the end of a ${role} interview?`
+        };
+        return questions[focus.key] || questions.intro;
+    },
+
+    exitPractice() {
+        const returnStage = this.state.practiceReturnStage === 6 ? 6 : 1;
+        this.goToStage(returnStage);
+    },
+
+    async startPractice(focusIndex = null, forceNew = false) {
         const el = (id) => document.getElementById(id);
-        const latestSession = this.state.sessions[0];
-        const weakness = (latestSession && latestSession.weaknesses && latestSession.weaknesses.length > 0) 
-                         ? latestSession.weaknesses[0] 
-                         : "General Communication";
+        if (this.state.currentStage !== 7) {
+            this.state.practiceReturnStage = this.state.currentStage === 6 ? 6 : 1;
+        }
+        const practiceSession = this.getActivePracticeSession();
+        const options = this.buildPracticeFocusOptions(practiceSession);
+        const activeIndex = Number.isInteger(focusIndex)
+            ? Math.max(0, Math.min(options.length - 1, focusIndex))
+            : (Number.isInteger(this.state.currentPracticeFocusIndex) ? this.state.currentPracticeFocusIndex : 0);
+        const focus = options[activeIndex] || options[0];
 
-        this.state.currentPracticeWeakness = weakness;
+        this.state.currentPracticeFocusIndex = activeIndex;
+        this.state.currentPracticeFocus = focus;
+        this.state.currentPracticeWeakness = focus.title;
+        this.renderPracticeFocusOptions(options, activeIndex);
 
-        // Reset UI
-        if (el('practice-weakness-name')) el('practice-weakness-name').textContent = weakness;
         if (el('practice-answer-input')) el('practice-answer-input').value = '';
         if (el('practice-feedback-container')) el('practice-feedback-container').classList.add('hidden');
         if (el('practice-container')) el('practice-container').classList.add('hidden');
         if (el('practice-loading')) el('practice-loading').classList.remove('hidden');
+        if (el('practice-source')) el('practice-source').textContent = focus.source || 'Latest report';
+        if (el('practice-focus-score')) {
+            el('practice-focus-score').classList.add('hidden');
+            el('practice-focus-score').textContent = '';
+        }
 
         this.goToStage(7);
 
         try {
-            const prompt = `
-                The student wants to practice their weakest area: "${weakness}".
-                Based on this area, generate ONE specific, challenging interview question that would help them improve.
-                
-                Respond with ONLY the question text.
-            `;
-            
-            const question = await this.callModelAPI(prompt, "You are an expert career coach helping a student improve a specific interview weakness.");
-            
-            if (el('practice-question')) el('practice-question').textContent = question || `How do you specifically handle challenges related to ${weakness}?`;
-            
+            const result = await this.postJSON('/api/practice-question', {
+                focus,
+                student_profile: this.state.user,
+                job_description: focus.jobDescription || this.state.job.description,
+                recent_questions: (practiceSession?.questionReviews || []).map((review) => review.question).filter(Boolean)
+            });
+            this.state.currentPracticeQuestion = result.practice_question || this.buildLocalPracticeQuestion(focus);
+            if (el('practice-question')) el('practice-question').textContent = this.state.currentPracticeQuestion;
+            if (el('practice-target-fix')) el('practice-target-fix').textContent = result.target_fix || focus.improvement || '';
+            if (el('practice-source')) el('practice-source').textContent = result.source || focus.source || 'Latest report';
             if (el('practice-loading')) el('practice-loading').classList.add('hidden');
             if (el('practice-container')) el('practice-container').classList.remove('hidden');
         } catch (err) {
             console.error("Failed to generate practice question:", err);
-            if (el('practice-question')) el('practice-question').textContent = `Can you give me an example of how you've demonstrated strong ${weakness} in the past?`;
+            this.state.currentPracticeQuestion = this.buildLocalPracticeQuestion(focus);
+            if (el('practice-question')) el('practice-question').textContent = this.state.currentPracticeQuestion;
+            if (el('practice-target-fix')) el('practice-target-fix').textContent = focus.improvement || 'Use a specific example and result.';
             if (el('practice-loading')) el('practice-loading').classList.add('hidden');
             if (el('practice-container')) el('practice-container').classList.remove('hidden');
         }
@@ -2836,34 +3296,36 @@ window.app = {
         const btn = el('btn-submit-practice');
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Analyzing...';
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Checking...';
         }
 
         try {
-            const prompt = `
-                The student is practicing their growth area: "${this.state.currentPracticeWeakness}".
-                
-                QUESTION ASKED: ${el('practice-question').textContent}
-                STUDENT ANSWER: ${answer}
-                
-                Provide a brief, encouraging, and highly actionable evaluation of this answer. 
-                Point out one thing they did well and one specific thing they could still improve.
-                Keep it under 100 words.
-            `;
-            
-            const feedback = await this.callModelAPI(prompt, "You are an expert career coach providing instant feedback on a practice answer.");
-            
-            if (el('practice-feedback-text')) el('practice-feedback-text').innerHTML = `<p>${feedback.replace(/\n/g, '<br>')}</p>`;
+            const feedback = await this.postJSON('/api/practice-feedback', {
+                focus: this.state.currentPracticeFocus || { title: this.state.currentPracticeWeakness },
+                practice_question: this.state.currentPracticeQuestion || el('practice-question')?.textContent || '',
+                answer,
+                student_profile: this.state.user,
+                job_description: this.state.currentPracticeFocus?.jobDescription || this.state.job.description
+            });
+
+            if (el('practice-feedback-score')) el('practice-feedback-score').textContent = Number.isFinite(Number(feedback.score)) ? Number(feedback.score).toFixed(1) : '--';
+            if (el('practice-feedback-strength')) el('practice-feedback-strength').textContent = feedback.strength || 'You answered the question.';
+            if (el('practice-feedback-fix')) el('practice-feedback-fix').textContent = feedback.fix || 'Add a clearer action and result.';
+            if (el('practice-feedback-next')) el('practice-feedback-next').textContent = feedback.next_try || 'Try again with one specific example.';
             if (el('practice-feedback-container')) el('practice-feedback-container').classList.remove('hidden');
             
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         } catch (err) {
             console.error("Failed to analyze practice answer:", err);
-            alert("Connection error. Please try again.");
+            if (el('practice-feedback-score')) el('practice-feedback-score').textContent = '--';
+            if (el('practice-feedback-strength')) el('practice-feedback-strength').textContent = 'You practiced the right area.';
+            if (el('practice-feedback-fix')) el('practice-feedback-fix').textContent = 'Add one concrete action and one outcome.';
+            if (el('practice-feedback-next')) el('practice-feedback-next').textContent = 'Try again with a STAR-style answer.';
+            if (el('practice-feedback-container')) el('practice-feedback-container').classList.remove('hidden');
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = 'Analyze Performance <i data-lucide="sparkles" class="w-4 h-4 group-hover:rotate-12 transition-transform"></i>';
+                btn.innerHTML = 'Check answer <i data-lucide="sparkles" class="w-4 h-4"></i>';
             }
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
@@ -2878,6 +3340,9 @@ window.app = {
     loadSessionReport(index) {
         const s = this.state.sessions[index];
         if (!s) return;
+        this.state.activePracticeSessionIndex = index;
+        this.state.currentPracticeFocus = null;
+        this.state.currentPracticeFocusIndex = null;
         
         // Switch to report stage
         this.goToStage(6);
@@ -2890,7 +3355,11 @@ window.app = {
             questionReviews: s.questionReviews || [],
             requirementsCovered: s.requirementsCovered || [],
             requirementsToPractice: s.requirementsToPractice || [],
+            technicalGaps: s.technicalGaps || [],
+            targetRole: s.targetRole || s.field || '',
+            field: s.field || '',
             skippedQuestions: s.skippedQuestions || [],
+            responses: s.responses || [],
             interviewType: s.mode || 'Interview',
             date: s.date || '',
             summary: s.scoringSummary || s.finalRecommendation || '',
@@ -2938,7 +3407,6 @@ window.app = {
         const firstName = this.formatDashboardName(name);
 
         if (el('dash-welcome-name')) el('dash-welcome-name').textContent = firstName;
-        if (el('nav-user-avatar')) el('nav-user-avatar').textContent = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
         // Profile Completeness
         let pct = 0;
@@ -2954,9 +3422,9 @@ window.app = {
         
         if (el('dash-profile-missing')) {
             if (missing.length === 0) {
-                el('dash-profile-missing').innerHTML = `<li class="flex items-center gap-2 text-green-600 font-bold uppercase text-[9px] tracking-widest"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Profile Complete</li>`;
+                el('dash-profile-missing').innerHTML = `<li class="dashboard-missing-item">Profile complete</li>`;
             } else {
-                el('dash-profile-missing').innerHTML = missing.map(m => `<li class="flex items-center gap-2 text-slate-400 font-bold uppercase text-[9px] tracking-widest"><i data-lucide="x-circle" class="w-3.5 h-3.5"></i> ${m}</li>`).join('');
+                el('dash-profile-missing').innerHTML = missing.map(m => `<li class="dashboard-missing-item">${this.escapeHTML(m)}</li>`).join('');
             }
         }
 
@@ -2964,45 +3432,32 @@ window.app = {
         const hasInterviews = this.state.sessions.length > 0;
         if (el('dash-welcome-copy')) {
             el('dash-welcome-copy').textContent = hasInterviews
-                ? 'Your latest feedback is ready. Continue with the recommendation below or revisit a previous report.'
+                ? 'Your latest report is ready. Practice from History when you want role-specific questions.'
                 : (pct >= 60
-                    ? 'Your profile has enough context. Build a focused practice session when you are ready.'
+                    ? 'Your profile has enough context. Start a role-based interview when you are ready.'
                     : 'Start with your profile so the interviewer can ask questions that fit your background and goals.');
         }
         if (!hasInterviews) {
             if (el('dash-readiness-score')) el('dash-readiness-score').textContent = "--";
-            if (el('dash-readiness-score')) el('dash-readiness-score').className = "text-6xl font-black text-slate-200 tracking-tighter";
+            if (el('dash-readiness-score')) el('dash-readiness-score').className = "dashboard-score-empty";
             if (el('dash-readiness-desc')) el('dash-readiness-desc').textContent = "Complete an interview to unlock your score.";
             if (el('dash-score-btn')) el('dash-score-btn').textContent = "Start interview";
+            if (el('dash-score-btn')) el('dash-score-btn').onclick = () => this.goToStage(3);
         } else {
             const avgScore = Math.round(this.state.sessions.slice(0, 3).reduce((acc, s) => acc + s.score, 0) / Math.min(this.state.sessions.length, 3) * 10);
             if (el('dash-readiness-score')) {
                 el('dash-readiness-score').textContent = avgScore;
-                el('dash-readiness-score').className = "text-6xl font-black text-brand-600 tracking-tighter";
+                el('dash-readiness-score').className = "dashboard-score-value";
             }
             if (el('dash-readiness-desc')) el('dash-readiness-desc').textContent = `Based on your last ${Math.min(this.state.sessions.length, 3)} sessions.`;
             if (el('dash-score-btn')) el('dash-score-btn').textContent = "View reports";
-        }
-
-        // Focus Area Card
-        if (!hasInterviews) {
-            if (el('dash-focus-area-title')) el('dash-focus-area-title').textContent = "What to practice next";
-            if (el('dash-focus-area-desc')) el('dash-focus-area-desc').textContent = "After one interview, this will show the single skill to focus on next.";
-            if (el('dash-focus-btn')) el('dash-focus-btn').textContent = "Practice this area";
-        } else {
-            const latest = this.state.sessions[0];
-            if (latest.weaknesses && latest.weaknesses.length > 0) {
-                if (el('dash-focus-area-title')) el('dash-focus-area-title').textContent = latest.weaknesses[0];
-                if (el('dash-focus-area-desc')) el('dash-focus-area-desc').textContent = "This is the main thing to improve before your next session.";
-                if (el('dash-focus-btn')) el('dash-focus-btn').textContent = "Practice this area";
-            }
+            if (el('dash-score-btn')) el('dash-score-btn').onclick = () => this.goToStage(8);
         }
 
         // Recommended Next Session Card
         if (!hasInterviews) {
             const profileReady = Boolean(this.state.user.name && this.state.user.skills && (this.state.user.experience || this.state.user.cvData?.education?.length));
             if (el('dash-session-suggestion-title')) el('dash-session-suggestion-title').textContent = profileReady ? 'Start an interview' : 'Complete your profile';
-            if (el('dash-session-suggestion-desc')) el('dash-session-suggestion-desc').textContent = profileReady ? 'Choose a short or full adaptive session tailored to your goal.' : 'Add your background first so the interviewer can ask relevant questions.';
             if (el('dash-suggestion-btn')) {
                 el('dash-suggestion-btn').textContent = profileReady ? 'Set up interview' : 'Continue profile';
                 el('dash-suggestion-btn').onclick = () => profileReady ? this.goToStage(3) : this.openEditProfile();
@@ -3010,21 +3465,14 @@ window.app = {
         } else {
             const latest = this.state.sessions[0];
             let nextMode = 'technical';
-            let recommendation = 'Technical Round';
-            let reason = 'Based on your field, a technical deep-dive is recommended.';
             
             if (latest.mode === 'technical') {
                 nextMode = 'hr';
-                recommendation = 'Behavioral Round';
-                reason = 'You recently did a technical round. Let\'s polish your behavioral answers.';
             } else if (latest.mode === 'hr') {
                 nextMode = 'behavioral';
-                recommendation = 'Behavioral Round';
-                reason = 'Build stronger evidence-based examples from your projects and experience.';
             }
 
-            if (el('dash-session-suggestion-title')) el('dash-session-suggestion-title').textContent = "Start an Interview";
-            if (el('dash-session-suggestion-desc')) el('dash-session-suggestion-desc').textContent = `Recommended: ${recommendation}. ${reason}`;
+            if (el('dash-session-suggestion-title')) el('dash-session-suggestion-title').textContent = "Start an interview";
             if (el('dash-suggestion-btn')) el('dash-suggestion-btn').textContent = "Start session";
             if (el('dash-suggestion-btn')) el('dash-suggestion-btn').onclick = () => {
                 this.state.wizard.style = nextMode;
@@ -3034,15 +3482,27 @@ window.app = {
 
         // Recent Interview
         if (hasInterviews) {
-            const latest = this.state.sessions[0];
             if (el('dash-recent-interview')) el('dash-recent-interview').classList.remove('hidden');
             if (el('dash-recent-interview')) el('dash-recent-interview').classList.add('flex');
             if (el('dash-no-recent')) el('dash-no-recent').classList.add('hidden');
-            
-            if (el('dash-recent-type')) el('dash-recent-type').textContent = latest.mode;
-            if (el('dash-recent-date')) el('dash-recent-date').textContent = latest.date;
-            if (el('dash-recent-job')) el('dash-recent-job').textContent = latest.field;
-            if (el('dash-recent-score')) el('dash-recent-score').textContent = `${latest.score}/10`;
+
+            if (el('dash-recent-list')) {
+                el('dash-recent-list').innerHTML = this.state.sessions.slice(0, 3).map((session, index) => `
+                    <article class="dashboard-session-row" onclick="window.app.loadSessionReport(${index})" role="button" tabindex="0" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.app.loadSessionReport(${index}); }">
+                        <div class="dashboard-session-main">
+                            <div class="dashboard-session-icon"><i data-lucide="message-square" class="w-5 h-5"></i></div>
+                            <div class="min-w-0">
+                                <p class="dashboard-session-title">${this.escapeHTML(session.field || 'Interview session')}</p>
+                                <div class="dashboard-meta">
+                                    <span>${this.escapeHTML(session.mode || 'Interview')}</span>
+                                    <span>${this.escapeHTML(session.date || 'Recent')}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="dashboard-score-pill">${this.escapeHTML(session.score ?? '--')}/10</span>
+                    </article>
+                `).join('');
+            }
         } else {
             if (el('dash-recent-interview')) {
                 el('dash-recent-interview').classList.add('hidden');
@@ -3062,45 +3522,53 @@ window.app = {
 
         if (this.state.sessions.length > 0) {
             list.innerHTML = this.state.sessions.map((s, i) => `
-                <div class="group p-6 bg-white rounded-3xl shadow-soft border border-slate-100 hover:border-brand-200 transition-all cursor-default relative">
-                    <button onclick="window.app.deleteSession(${i})" class="absolute top-4 right-4 w-8 h-8 bg-white border border-slate-100 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all" title="Delete Session">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                    <div class="flex items-center justify-between mb-4 mr-6">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center shrink-0">
-                                <i data-lucide="message-square" class="w-6 h-6"></i>
+                <article class="history-card" onclick="window.app.loadSessionReport(${i})" role="button" tabindex="0" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.app.loadSessionReport(${i}); }">
+                    <div class="min-w-0">
+                        <div class="history-main">
+                            <div class="history-icon">
+                                <i data-lucide="message-square" class="w-5 h-5"></i>
                             </div>
-                            <div>
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${s.date} &bull; ${s.mode}</p>
-                                <p class="text-base font-black text-brand-900">${s.field}</p>
+                            <div class="min-w-0">
+                                <div class="history-meta">
+                                    <span><i data-lucide="calendar-days" class="w-3.5 h-3.5 text-[#007aff]"></i>${this.escapeHTML(s.date || 'Recent')}</span>
+                                    <span><i data-lucide="briefcase-business" class="w-3.5 h-3.5 text-[#007aff]"></i>${this.escapeHTML(s.mode || 'Interview')}</span>
+                                </div>
+                                <p class="history-field">${this.escapeHTML(s.field || 'Interview session')}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-6">
-                            <div class="text-right">
-                                <p class="text-2xl font-black text-brand-500">${s.score}<span class="text-sm opacity-40">/10</span></p>
-                                <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest">Score</p>
+                        <div class="history-details">
+                            <div class="history-detail">
+                                <p class="history-detail-label">Strength</p>
+                                <p class="history-detail-text">${this.escapeHTML(s.strengths && s.strengths.length > 0 ? s.strengths[0] : 'No strength recorded yet.')}</p>
                             </div>
-                            <button onclick="window.app.loadSessionReport(${i})" class="btn-primary py-2.5 px-6 text-[10px] uppercase tracking-widest rounded-xl shadow-lg">View Report</button>
+                            <div class="history-detail">
+                                <p class="history-detail-label">Focus area</p>
+                                <p class="history-detail-text">${this.escapeHTML(s.weaknesses && s.weaknesses.length > 0 ? s.weaknesses[0] : 'No focus area recorded yet.')}</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-6 border-t border-slate-50 pt-6">
-                        <div>
-                            <p class="text-[9px] font-bold text-green-600 uppercase tracking-[0.2em] mb-2 flex items-center gap-1"><i data-lucide="arrow-up-circle" class="w-3 h-3"></i> Top Strength</p>
-                            <p class="text-xs text-slate-500 font-medium">${s.strengths && s.strengths.length > 0 ? s.strengths[0] : 'N/A'}</p>
+                    <div class="history-score">
+                        <div class="history-score-ring">
+                            <div class="text-center leading-none">
+                                <span class="text-xl">${this.escapeHTML(s.score ?? '--')}</span><span class="text-xs text-[#667085]">/10</span>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-[9px] font-bold text-orange-500 uppercase tracking-[0.2em] mb-2 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i> Top Focus Area</p>
-                            <p class="text-xs text-slate-500 font-medium">${s.weaknesses && s.weaknesses.length > 0 ? s.weaknesses[0] : 'N/A'}</p>
+                        <div class="history-actions">
+                            <button onclick="event.stopPropagation(); window.app.practiceSession(${i})" class="btn-secondary !min-h-[40px] !px-4 !py-2 text-sm">Practice</button>
+                            <button onclick="event.stopPropagation(); window.app.deleteSession(${i})" class="history-icon-button" title="Delete session">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
                         </div>
                     </div>
-                </div>
+                </article>
             `).join('');
         } else {
             list.innerHTML = `
-                <div class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-100">
-                    <i data-lucide="ghost" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
-                    <p class="text-slate-500 font-medium">No interviews completed yet.</p>
+                <div class="history-empty">
+                    <div class="profile-avatar mx-auto mb-4"><i data-lucide="clock-3" class="w-6 h-6"></i></div>
+                    <p class="text-lg font-bold text-[#111827]">No interviews completed yet.</p>
+                    <p class="mt-2 text-sm">Once you complete an interview, its report will appear here.</p>
+                    <button onclick="window.app.goToStage(3)" class="btn-primary mt-5">Start an interview</button>
                 </div>
             `;
         }
@@ -3108,13 +3576,31 @@ window.app = {
     },
 
     deleteSession(index) {
-        if (!confirm("Are you sure you want to delete this session? This action cannot be undone.")) return;
-        
+        if (!this.state.sessions[index]) return;
+        this.state.pendingDeleteSessionIndex = index;
+        const popup = document.getElementById('delete-session-popup');
+        if (popup) popup.classList.remove('hidden');
+    },
+
+    cancelDeleteSession() {
+        this.state.pendingDeleteSessionIndex = null;
+        const popup = document.getElementById('delete-session-popup');
+        if (popup) popup.classList.add('hidden');
+    },
+
+    confirmDeleteSession() {
+        const index = this.state.pendingDeleteSessionIndex;
+        if (!Number.isInteger(index) || !this.state.sessions[index]) {
+            this.cancelDeleteSession();
+            return;
+        }
         this.state.sessions.splice(index, 1);
+        this.state.pendingDeleteSessionIndex = null;
         this.saveUserData();
         this.showHistory();
+        const popup = document.getElementById('delete-session-popup');
+        if (popup) popup.classList.add('hidden');
         
-        // Show a brief status message if possible
         const statusEl = document.getElementById('history-status');
         if (statusEl) {
             statusEl.textContent = 'Session deleted.';
@@ -3287,17 +3773,41 @@ window.app = {
     },
 
     // --- Speech Synthesis ---
-    speak(text, callback, rate = 0.94) {
-        if (!window.speechSynthesis) { if (callback) callback(); return; }
+    pickSpeechVoice(voices = []) {
+        if (!voices.length) return null;
+        const scored = voices.map((voice) => {
+            const name = `${voice.name || ''} ${voice.lang || ''}`.toLowerCase();
+            let score = 0;
+            if (name.includes('natural')) score += 8;
+            if (name.includes('premium')) score += 7;
+            if (name.includes('enhanced')) score += 6;
+            if (name.includes('google')) score += 4;
+            if (name.includes('samantha')) score += 4;
+            if (name.includes('aria')) score += 3;
+            if (name.includes('jenny')) score += 3;
+            if (name.includes('female')) score += 2;
+            if (voice.lang && voice.lang.toLowerCase().startsWith('en')) score += 4;
+            if (voice.default) score += 1;
+            return { voice, score };
+        }).sort((a, b) => b.score - a.score);
+        return scored[0]?.voice || voices[0];
+    },
+
+    speak(text, callback, rate = 0.88) {
+        if (!window.speechSynthesis || this.state.interviewMuted) { if (callback) callback(); return; }
         window.speechSynthesis.cancel();
         const ut = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
-        ut.voice = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google US English') || v.lang.startsWith('en-US')) || voices[0];
-        ut.rate = rate; ut.pitch = 1.0;
+        ut.voice = this.pickSpeechVoice(voices);
+        ut.lang = ut.voice?.lang || 'en-US';
+        ut.rate = rate;
+        ut.pitch = 1.03;
+        ut.volume = 1;
         const pulseEl = document.getElementById('ai-pulse');
         const statusEl = document.getElementById('interviewer-status');
         ut.onstart = () => { if (pulseEl) pulseEl.classList.add('opacity-100'); if (statusEl) statusEl.textContent = 'Speaking...'; };
         ut.onend = () => { if (pulseEl) pulseEl.classList.remove('opacity-100'); if (callback) callback(); };
+        ut.onerror = () => { if (pulseEl) pulseEl.classList.remove('opacity-100'); if (callback) callback(); };
         window.speechSynthesis.speak(ut);
     }
 };

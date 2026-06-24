@@ -8,6 +8,7 @@ const OpenAI = require('openai');
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
+const host = process.env.HOST || '127.0.0.1';
 const model = process.env.OPENAI_MODEL || 'gpt-5.4-mini';
 const openai = process.env.OPENAI_API_KEY
     ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -43,6 +44,30 @@ const clarificationSchema = {
         answer_hint: { type: 'string' }
     },
     required: ['rephrased_question', 'what_interviewer_checks', 'answer_hint']
+};
+
+const practiceQuestionSchema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+        focus_title: { type: 'string' },
+        practice_question: { type: 'string' },
+        target_fix: { type: 'string' },
+        source: { type: 'string' }
+    },
+    required: ['focus_title', 'practice_question', 'target_fix', 'source']
+};
+
+const practiceFeedbackSchema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+        score: { type: 'number', minimum: 0, maximum: 10 },
+        strength: { type: 'string' },
+        fix: { type: 'string' },
+        next_try: { type: 'string' }
+    },
+    required: ['score', 'strength', 'fix', 'next_try']
 };
 
 const finalReportSchema = {
@@ -237,6 +262,15 @@ function stringList(value, maxItems, maxLength) {
     return value.slice(0, maxItems).map((item) => text(item, maxLength)).filter(Boolean);
 }
 
+function textLines(value, maxItems = 10, maxLength = 500) {
+    return text(value, maxItems * maxLength)
+        .split(/\n|;|\u2022/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, maxItems)
+        .map((item) => item.slice(0, maxLength));
+}
+
 function normalizeTranscript(value, maxItems = 50) {
     if (!Array.isArray(value)) return [];
     return value.slice(0, maxItems).map((item) => ({
@@ -310,6 +344,7 @@ function normalizeProfile(value) {
         field: text(value.field, 300),
         skills: text(value.skills, 3000),
         courses: text(value.courses, 3000),
+        projectNotes: text(value.projects, 8000),
         experience: text(value.experience, 8000),
         targetRole: text(cv.targetRole || value.targetRole || value.field, 300),
         summary: text(cv.summary || value.summary, 3000),
@@ -322,6 +357,41 @@ function normalizeProfile(value) {
         certifications: stringList(cv.certifications, 30, 300),
         languages: stringList(cv.languages, 30, 200)
     };
+}
+
+function buildProfileEvidence(profile) {
+    const evidence = [];
+    const push = (label, value) => {
+        const clean = text(value, 700);
+        if (clean) evidence.push(`${label}: ${clean}`);
+    };
+    const pushList = (label, items) => {
+        const clean = Array.isArray(items) ? items.map((item) => text(item, 200)).filter(Boolean) : [];
+        if (clean.length) evidence.push(`${label}: ${clean.slice(0, 8).join(', ')}`);
+    };
+
+    push('Target role', profile.targetRole || profile.field);
+    push('Profile summary', profile.summary);
+    push('Field', profile.field);
+    push('Skills', profile.skills);
+    pushList('Structured skills', profile.structuredSkills ? Object.values(profile.structuredSkills).flat() : []);
+    push('Relevant courses', profile.courses || profile.relevantCourses?.join(', '));
+
+    (profile.education || []).slice(0, 4).forEach((item) => {
+        push('Education', [item.degree, item.field, item.institution, item.details].filter(Boolean).join(' - '));
+    });
+    textLines(profile.projectNotes, 6, 500).forEach((item) => push('Project note', item));
+    (profile.projects || []).slice(0, 6).forEach((item) => {
+        push('CV project', [item.name, item.role, item.description, item.technologies?.join(', '), item.impact].filter(Boolean).join(' - '));
+    });
+    textLines(profile.experience, 6, 500).forEach((item) => push('Experience note', item));
+    (profile.structuredExperience || []).slice(0, 6).forEach((item) => {
+        push('CV experience', [item.title, item.organization, item.description, item.skillsUsed?.join(', ')].filter(Boolean).join(' - '));
+    });
+    pushList('Certifications', profile.certifications);
+    pushList('Languages', profile.languages);
+
+    return evidence.slice(0, 24);
 }
 
 const ANALYSIS_STOP_WORDS = new Set([
@@ -668,8 +738,10 @@ app.post('/api/interview-next-question', requireOpenAI, async (req, res) => {
         && followUpsAsked < maxFollowUps
         && totalQuestionsAsked < maxQuestions - 1
         && requiredStage !== 'closing';
+    const studentProfile = normalizeProfile(req.body?.student_profile);
     const payload = {
-        student_profile: normalizeProfile(req.body?.student_profile),
+        student_profile: studentProfile,
+        profile_evidence: buildProfileEvidence(studentProfile),
         job_description: text(req.body?.job_description, 12000),
         interview_type: text(req.body?.interview_type, 100),
         interview_length: interviewLength,
@@ -699,11 +771,24 @@ app.post('/api/interview-next-question', requireOpenAI, async (req, res) => {
         const result = await createStructuredResponse(
             'interview_next_question',
             nextQuestionSchema,
-            `You are conducting a realistic, structured job interview—not a casual chatbot conversation.
-Ask exactly one concise question. Every question must be grounded in at least one explicit job requirement,
-candidate skill, course, experience, project, or concrete detail from the latest answer. Do not ask a generic
-question when a specific version can be asked. An opening question may ask for an introduction, but it must
-name the target role or connect to relevant candidate experience.
+            `You are conducting a realistic, structured job interview as a thoughtful senior interviewer who has
+read the candidate's CV/profile before the meeting. The interview should feel human, specific, and professional,
+not like a quiz or a generic chatbot.
+
+Ask exactly one concise question. Prefer a natural interviewer framing such as "I noticed on your profile..."
+or "You mentioned..." when a real profile_evidence item or latest answer supports it. Use only facts present
+in profile_evidence, student_profile, job_description, or the transcript; never invent employers, projects,
+metrics, degrees, responsibilities, or technologies. Every question must be grounded in at least one explicit
+job requirement, candidate skill, course, experience, project, education item, CV detail, language, or concrete
+detail from the latest answer. Do not ask a generic question when a specific version can be asked. An opening
+question may ask for an introduction, but it must name the target role or connect to one profile/CV detail.
+
+Across the interview, cover both sides of the real interview dynamic:
+- CV/profile probing: ask about claims, projects, courses, skills, education, work history, languages, or gaps
+  in a way a hiring manager would naturally ask after reading a resume.
+- Role fit: compare the candidate's evidence with the job description and ask about the most important fit risks.
+- Depth checks: when the candidate names a skill or project, ask what they personally did, how they made decisions,
+  what trade-offs they faced, what changed because of their work, and what they learned.
 
 The required_stage_for_new_topic is the interview plan: opening, role_fit, experience, behavioral, technical,
 then closing. If can_ask_follow_up is false, ask a new main question in exactly that stage. If it is true, ask
@@ -715,7 +800,9 @@ Never repeat or lightly paraphrase an asked question. Do not revisit skipped que
 
 Technical questions must be realistic for skills actually named in the job or profile. Behavioral questions
 must connect to a relevant competency such as teamwork, pressure, conflict, learning, communication, or
-problem solving. Experience questions must name a real project, course, skill, or role from the profile.
+problem solving. Experience questions must name a real project, course, skill, education item, or role from
+the profile when one exists. If the profile is thin, ask the candidate to choose a real example rather than
+pretending you saw one.
 Honor the selected interview_type: HR emphasizes motivation and fit; technical emphasizes job-specific
 knowledge; behavioral emphasizes evidence from past behavior; situational uses realistic role scenarios;
 mixed balances all of them while still following the stage plan. Honor interviewer_style only in tone and
@@ -723,7 +810,8 @@ depth, never by becoming hostile or vague.
 When required_stage_for_new_topic is closing, ask a tailored final fit or candidate-question closing question
 and set is_follow_up false. reason is a short user-facing explanation of why this question is relevant; it must
 not contain hidden reasoning. job_requirement is the specific requirement being checked, or the closest
-profile evidence when there is no pasted job description.`,
+profile evidence when there is no pasted job description. topic should name the concrete CV/profile/job item
+being tested, not a vague category.`,
             payload
         );
         res.json(result);
@@ -758,6 +846,90 @@ or a model answer the candidate could copy. Keep all three fields concise and pr
     } catch (error) {
         console.error('OpenAI clarification error:', error.message);
         res.status(502).json({ error: 'Could not clarify this question right now.' });
+    }
+});
+
+app.post('/api/practice-question', requireOpenAI, async (req, res) => {
+    const studentProfile = normalizeProfile(req.body?.student_profile);
+    const focus = req.body?.focus && typeof req.body.focus === 'object' ? req.body.focus : {};
+    const payload = {
+        student_profile: studentProfile,
+        profile_evidence: buildProfileEvidence(studentProfile),
+        focus: {
+            title: text(focus.title, 300),
+            type: text(focus.type, 100),
+            key: text(focus.key, 100),
+            role: text(focus.role, 300),
+            interview_mode: text(focus.interviewMode, 100),
+            score: Number.isFinite(Number(focus.score)) ? Number(focus.score) : null,
+            question: text(focus.question, 2000),
+            answer: text(focus.answer, 5000),
+            improvement: text(focus.improvement, 1000),
+            requirement: text(focus.requirement, 500)
+        },
+        job_description: text(req.body?.job_description, 12000),
+        recent_questions: stringList(req.body?.recent_questions, 10, 2000)
+    };
+
+    try {
+        const result = await createStructuredResponse(
+            'practice_question',
+            practiceQuestionSchema,
+            `Create one fresh interview practice question for the selected practice category. The UI categories
+are intro, role_fit, cv, behavioral, technical, and closing. Do not simply re-ask an old interview question.
+Use the role, job_description, student_profile, and profile_evidence to tailor the question to the kind of
+job the candidate has been practicing for. recent_questions are only there so you can avoid repeating them.
+
+Category behavior:
+- intro: short "tell me about yourself" / background pitch connected to the role.
+- role_fit: why this role, why this company/team type, strongest fit evidence, or fit risks.
+- cv: projects, education, skills, experience, or CV claims a real interviewer would probe.
+- behavioral: teamwork, conflict, pressure, failure, leadership, learning, or communication.
+- technical: job-specific skill depth, process, trade-offs, tools, or problem-solving.
+- closing: final fit answer, candidate questions, salary/availability style closing, or next-step readiness.
+
+The question must feel like a human interviewer, be specific, and be answerable in 1-2 minutes. Use
+profile_evidence when useful, but never invent details. Keep target_fix under 14 words. source should be
+the category or role in under 8 words.`,
+            payload
+        );
+        res.json(result);
+    } catch (error) {
+        console.error('OpenAI practice-question error:', error.message);
+        res.status(502).json({ error: 'Could not generate a practice question.' });
+    }
+});
+
+app.post('/api/practice-feedback', requireOpenAI, async (req, res) => {
+    const payload = {
+        focus: {
+            title: text(req.body?.focus?.title, 300),
+            improvement: text(req.body?.focus?.improvement, 1000),
+            score: Number.isFinite(Number(req.body?.focus?.score)) ? Number(req.body.focus.score) : null
+        },
+        practice_question: text(req.body?.practice_question, 2000),
+        answer: text(req.body?.answer, 8000),
+        student_profile: normalizeProfile(req.body?.student_profile),
+        job_description: text(req.body?.job_description, 12000)
+    };
+    if (!payload.practice_question || !payload.answer) {
+        return res.status(400).json({ error: 'practice_question and answer are required.' });
+    }
+
+    try {
+        const result = await createStructuredResponse(
+            'practice_feedback',
+            practiceFeedbackSchema,
+            `Score this practice answer as an interview coach. Be direct, short, and useful. The user wants
+minimal text. Return one concrete strength, one concrete fix, and one next_try instruction. Reward specific
+examples, personal action, relevance to the question, and outcomes. Penalize vague answers and missing impact.
+Each text field should be one sentence under 18 words.`,
+            payload
+        );
+        res.json(result);
+    } catch (error) {
+        console.error('OpenAI practice-feedback error:', error.message);
+        res.status(502).json({ error: 'Could not analyze the practice answer.' });
     }
 });
 
@@ -874,7 +1046,7 @@ app.use((error, _req, res, _next) => {
     res.status(500).json({ error: 'Unexpected server error.' });
 });
 
-app.listen(port, () => {
-    console.log(`PrepWise is running at http://localhost:${port}`);
+app.listen(port, host, () => {
+    console.log(`PrepWise is running at http://${host}:${port}`);
     if (!openai) console.warn('OPENAI_API_KEY is missing. Add it to .env before using AI endpoints.');
 });
