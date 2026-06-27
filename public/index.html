@@ -109,8 +109,60 @@
         .top-nav-link { padding:.55rem .8rem; border-radius:10px; transition:color .25s, background-color .25s; }
         .top-nav-link:hover { color:#1d1d1d !important; background:#f5f5f7 !important; }
         .top-nav-link.active { color:#007aff !important; background:#f2f9ff !important; }
-        #auth-view .auth-hero-title { font-size:clamp(2.7rem,6vw,4.75rem); line-height:.98; letter-spacing:-.055em; }
-        #auth-view .auth-card { border:1px solid var(--line); border-radius:1.35rem; box-shadow:0 24px 70px rgba(31,43,71,.09); }
+        #auth-view { position:relative; overflow:hidden; isolation:isolate; width:100vw; min-height:calc(100vh - 10rem); margin-left:calc(50% - 50vw); margin-right:calc(50% - 50vw); padding:1.2rem max(1rem,calc((100vw - 1120px)/2)) 3.4rem; background:linear-gradient(145deg,#ffffff 0%,#f8fbff 48%,#eef7ff 100%); }
+        #auth-view::before { content:''; position:absolute; z-index:0; right:2.5rem; top:7.5rem; width:35rem; height:35rem; pointer-events:none; opacity:.62; background:radial-gradient(circle at 50% 48%,rgba(0,122,255,.14),rgba(111,177,255,.07) 38%,rgba(255,255,255,0) 68%); filter:blur(2px); }
+        #auth-view::after { content:''; position:absolute; z-index:0; left:-4rem; bottom:-2rem; width:36rem; height:19rem; pointer-events:none; opacity:.42; background:
+            radial-gradient(ellipse at 28% 105%,rgba(255,255,255,.85),rgba(255,255,255,0) 58%),
+            repeating-radial-gradient(ellipse at 0% 100%,transparent 0 18px,rgba(0,122,255,.16) 19px 20px,transparent 21px 38px);
+            mask-image:linear-gradient(90deg,transparent 0%,#000 18%,#000 72%,transparent 100%);
+        }
+        #auth-view .auth-shell { position:relative; z-index:1; max-width:1140px; margin:0 auto; }
+        #auth-view .auth-topbar { display:flex; align-items:center; justify-content:space-between; gap:1.5rem; margin-bottom:5.15rem; }
+        #auth-view .auth-brand { display:flex; align-items:center; gap:.8rem; }
+        #auth-view .auth-brand-mark { width:2.65rem; height:2.65rem; display:grid; place-items:center; border-radius:14px; color:#fff; background:#007aff; box-shadow:0 12px 26px rgba(0,122,255,.16); }
+        #auth-view .auth-brand-title { color:#111827; font-size:1.05rem; font-weight:760; line-height:1; letter-spacing:-.025em; }
+        #auth-view .auth-brand-subtitle { color:#667085; font-size:.76rem; font-weight:650; margin-top:.2rem; letter-spacing:-.01em; }
+        #auth-view .auth-layout { display:grid; grid-template-columns:minmax(0,55fr) minmax(420px,45fr); gap:4.25rem; align-items:center; }
+        #auth-view .auth-hero { min-width:0; max-width:650px; padding-top:.1rem; }
+        #auth-view .auth-kicker { display:inline-flex; align-items:center; gap:.42rem; color:#52677f; background:rgba(239,247,255,.82); border:1px solid #d8eaff; border-radius:999px; padding:.34rem .62rem; font-size:.77rem; font-weight:690; letter-spacing:-.004em; box-shadow:inset 0 1px 0 rgba(255,255,255,.82),0 8px 20px rgba(31,87,142,.035); }
+        #auth-view .auth-kicker i { width:.88rem; height:.88rem; color:#007aff; opacity:.72; }
+        #auth-view .auth-hero-title { margin-top:1.25rem; color:#101827; font-size:clamp(2.35rem,4vw,3.45rem); line-height:1.055; font-weight:740; letter-spacing:-.043em; max-width:660px; }
+        #auth-view .auth-hero-title span { display:inline-block; color:#0b73ff; font-weight:740; }
+        #auth-view .auth-hero-copy { color:#5f6f84; font-size:1.03rem; line-height:1.62; max-width:475px; margin-top:1.25rem; font-weight:430; letter-spacing:-.005em; }
+        #auth-view .auth-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.85rem; margin-top:1.35rem; }
+        #auth-view .auth-trust-note { display:inline-flex; align-items:center; gap:.42rem; color:#6f7f92; font-size:.8rem; font-weight:630; }
+        #auth-view .auth-trust-note i { width:.92rem; height:.92rem; opacity:.82; }
+        #auth-view .auth-proof-row { display:flex; align-items:center; gap:1rem; max-width:620px; margin-top:2.4rem; padding-top:1.05rem; border-top:1px solid rgba(199,215,232,.72); color:#5f6f84; font-size:.82rem; font-weight:670; line-height:1.4; letter-spacing:-.006em; }
+        #auth-view .auth-proof-item { display:inline-flex; align-items:center; gap:.45rem; min-width:0; white-space:nowrap; }
+        #auth-view .auth-proof-icon { width:1.55rem; height:1.55rem; display:grid; place-items:center; border-radius:9px; color:#007aff; background:rgba(239,247,255,.8); border:1px solid #dcecff; flex:none; }
+        #auth-view .auth-proof-icon i { width:.82rem; height:.82rem; }
+        #auth-view .auth-card-wrap { position:relative; }
+        #auth-view .auth-card-wrap::before { content:''; position:absolute; inset:-4rem -3.5rem -3rem -3.5rem; z-index:-1; pointer-events:none; background:radial-gradient(circle at 52% 42%,rgba(0,122,255,.16),rgba(118,184,255,.08) 42%,rgba(255,255,255,0) 70%); filter:blur(4px); }
+        #auth-view .auth-card { position:relative; overflow:hidden; width:min(100%,450px); margin-left:auto; border:1px solid rgba(210,225,241,.86); border-radius:30px; background:rgba(255,255,255,.96); box-shadow:0 28px 80px rgba(28,52,84,.13),0 1px 0 rgba(255,255,255,.96) inset; backdrop-filter:blur(20px); padding:2.25rem; }
+        #auth-view .auth-card::before { content:''; position:absolute; top:0; left:2.4rem; right:2.4rem; height:1px; background:linear-gradient(90deg,transparent,#dcecff 18%,#a8d2ff 50%,#dcecff 82%,transparent); opacity:.78; }
+        #auth-view .auth-card-icon { width:3.15rem; height:3.15rem; display:grid; place-items:center; border-radius:16px; color:#007aff; background:#f2f8ff; border:1px solid #d7ebff; box-shadow:0 10px 24px rgba(0,122,255,.07); flex:none; }
+        #auth-view .auth-card-heading { display:flex; align-items:center; gap:1rem; margin-bottom:1.55rem; }
+        #auth-view .auth-card-title { color:#111827; font-size:1.45rem; line-height:1.15; font-weight:780; letter-spacing:-.03em; }
+        #auth-view .auth-card-subtitle { color:#667085; font-size:.94rem; line-height:1.5; margin-top:.35rem; font-weight:450; letter-spacing:-.01em; }
+        #auth-view .auth-input { display:flex; align-items:center; gap:.75rem; min-height:3.22rem; padding:0 .9rem; border:1px solid #dfe8f2; border-radius:15px; background:#fbfdff; transition:.2s ease; box-shadow:inset 0 1px 0 rgba(255,255,255,.8); }
+        #auth-view .auth-input:focus-within { border-color:#007aff; background:#fff; box-shadow:0 0 0 4px rgba(0,122,255,.09); }
+        #auth-view .auth-input input { min-width:0; width:100%; border:0 !important; background:transparent; color:#111827; font-size:.96rem; font-weight:560; box-shadow:none !important; padding:0; }
+        #auth-view .auth-input input::placeholder { color:#98a2b3; font-weight:520; }
+        #auth-view .auth-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.1rem .05rem .15rem; }
+        #auth-view .auth-check { display:flex; align-items:center; gap:.45rem; color:#667085; font-size:.8rem; font-weight:650; cursor:pointer; }
+        #auth-view .auth-forgot { color:#007aff; font-size:.8rem; font-weight:700; }
+        #auth-view .auth-submit { width:100%; display:flex; align-items:center; justify-content:center; gap:.45rem; min-height:3.18rem; border-radius:15px; font-size:.96rem; font-weight:720; box-shadow:0 12px 26px rgba(0,122,255,.22); }
+        #auth-view .auth-divider { position:relative; display:flex; justify-content:center; align-items:center; margin:1.15rem 0; color:#98a2b3; font-size:.74rem; font-weight:760; text-transform:uppercase; letter-spacing:.08em; }
+        #auth-view .auth-divider::before { content:''; position:absolute; left:0; right:0; top:50%; height:1px; background:#edf1f5; }
+        #auth-view .auth-divider span { position:relative; z-index:1; padding:0 .75rem; background:#fff; }
+        #auth-view .auth-google { width:100%; min-height:3.2rem; display:flex; align-items:center; justify-content:center; gap:.72rem; border:1.5px solid #c9d8e8; border-radius:15px; background:#fff; color:#1f2937; font-size:.96rem; font-weight:740; box-shadow:0 12px 26px rgba(20,34,59,.06); transition:.2s ease; }
+        #auth-view .auth-google:hover { border-color:#b9c8d8; background:#fbfdff; transform:translateY(-1px); box-shadow:0 18px 36px rgba(20,34,59,.09); }
+        #auth-view .auth-google img { transition:transform .2s ease; }
+        #auth-view .auth-google:hover img { transform:scale(1.06); }
+        #auth-view .auth-switch { color:#667085; font-size:.86rem; font-weight:620; text-align:center; margin-top:1rem; }
+        #auth-view .auth-switch button { color:#007aff; font-weight:760; }
+        #auth-view .auth-guest { display:inline-flex; align-items:center; justify-content:center; color:#667085; font-size:.82rem; font-weight:720; margin-top:.8rem; transition:.2s ease; }
+        #auth-view .auth-guest:hover { color:#007aff; }
         #auth-testimonials { display:none; }
         .interview-status-strip { border:1px solid #dfe3ff; background:#f6f7ff; color:#4551b5; border-radius:.8rem; padding:.7rem .9rem; font-size:.78rem; font-weight:650; }
         .dashboard-clamp-title,.dashboard-clamp-copy { display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
@@ -344,8 +396,8 @@
         .app-top-popup-copy { color:#667085; font-size:.86rem; line-height:1.45; margin-top:.2rem; }
         .app-top-popup-actions { display:flex; align-items:center; gap:.5rem; flex:none; }
         .app-popup-delete { min-height:36px; padding:.5rem .8rem; border-radius:11px; background:#111827; color:#fff; font-size:.84rem; font-weight:700; }
-        @media(max-width:900px){ .profile-hero,.dashboard-hero{align-items:flex-start;flex-direction:column}.profile-layout,.dashboard-grid{grid-template-columns:1fr}.profile-rail{position:static}.profile-grid{grid-template-columns:1fr}.profile-save-bar{align-items:stretch;flex-direction:column}.profile-save-bar .btn-primary,.profile-save-bar .btn-secondary{width:100%;justify-content:center}.dashboard-cta{grid-template-columns:1fr}.dashboard-cta .btn-primary{width:100%;justify-content:center}.dashboard-session-top{align-items:flex-start;flex-direction:column}.dashboard-score-pill{align-self:flex-start}.dashboard-session-main{width:100%;min-width:0}.dashboard-shell{width:100%;min-width:0}.dashboard-panel,.dashboard-cta{min-width:0}.dashboard-panel-body .btn-primary,.dashboard-panel-body .profile-button-quiet{max-width:100%} }
-        @media(max-width:767px){ main{padding:1.25rem 1rem 5rem !important}.card,.stat-card,.card-premium{padding:1.15rem;border-radius:1rem}#auth-view .auth-hero-title{font-size:2.8rem}.nav-link{padding:.55rem}.nav-link span{display:none}.report-hero-content,.history-hero,.practice-hero{align-items:flex-start;flex-direction:column}.report-two-col,.report-fit-summary,.report-insight-grid{grid-template-columns:1fr}.report-fit-column+.report-fit-column{border-left:0}.report-question-card{padding:1.25rem}.report-question-top,.report-score-panel,.history-card,.practice-feedback-grid,.practice-layout{grid-template-columns:1fr}.practice-focus-list{flex-direction:row;overflow-x:auto}.practice-focus-chip{width:auto;white-space:nowrap}.report-actions .btn-primary,.report-actions .btn-secondary{width:100%;justify-content:center}.report-score-copy,.history-main{align-items:flex-start}.history-details{grid-template-columns:1fr}.history-score{justify-content:space-between}.history-actions{justify-content:flex-end}.history-title,.report-title,.practice-title{font-size:2.55rem}.practice-actions .btn-primary,.practice-actions .btn-secondary{width:100%;justify-content:center} }
+        @media(max-width:900px){ #auth-view{padding:1rem 0 3rem}#auth-view .auth-topbar{margin-bottom:3rem}#auth-view .auth-layout{grid-template-columns:1fr;gap:2.4rem;align-items:start}#auth-view .auth-hero{max-width:680px}#auth-view .auth-card-wrap{width:100%}#auth-view .auth-card{width:min(100%,520px);margin:0 auto}.profile-hero,.dashboard-hero{align-items:flex-start;flex-direction:column}.profile-layout,.dashboard-grid{grid-template-columns:1fr}.profile-rail{position:static}.profile-grid{grid-template-columns:1fr}.profile-save-bar{align-items:stretch;flex-direction:column}.profile-save-bar .btn-primary,.profile-save-bar .btn-secondary{width:100%;justify-content:center}.dashboard-cta{grid-template-columns:1fr}.dashboard-cta .btn-primary{width:100%;justify-content:center}.dashboard-session-top{align-items:flex-start;flex-direction:column}.dashboard-score-pill{align-self:flex-start}.dashboard-session-main{width:100%;min-width:0}.dashboard-shell{width:100%;min-width:0}.dashboard-panel,.dashboard-cta{min-width:0}.dashboard-panel-body .btn-primary,.dashboard-panel-body .profile-button-quiet{max-width:100%} }
+        @media(max-width:767px){ main{padding:1.25rem 1rem 5rem !important}.card,.stat-card,.card-premium{padding:1.15rem;border-radius:1rem}#auth-view{border-radius:0 0 24px 24px}#auth-view::before{right:-10rem;top:20rem}#auth-view::after{width:28rem;height:14rem;left:-8rem;bottom:-1rem}#auth-view .auth-topbar{margin-bottom:2.35rem}#auth-view .auth-brand-mark{width:2.35rem;height:2.35rem}#auth-view .auth-hero-title{font-size:clamp(2.2rem,11vw,3rem);letter-spacing:-.04em}#auth-view .auth-hero-copy{font-size:1rem}#auth-view .auth-proof-row{align-items:flex-start;flex-direction:column;gap:.65rem;margin-top:1.8rem;padding-top:1rem;line-height:1.45}#auth-view .auth-card{padding:1.35rem;border-radius:22px}#auth-view .auth-card-heading{align-items:center}#auth-view .auth-card-title{font-size:1.25rem}.nav-link{padding:.55rem}.nav-link span{display:none}.report-hero-content,.history-hero,.practice-hero{align-items:flex-start;flex-direction:column}.report-two-col,.report-fit-summary,.report-insight-grid{grid-template-columns:1fr}.report-fit-column+.report-fit-column{border-left:0}.report-question-card{padding:1.25rem}.report-question-top,.report-score-panel,.history-card,.practice-feedback-grid,.practice-layout{grid-template-columns:1fr}.practice-focus-list{flex-direction:row;overflow-x:auto}.practice-focus-chip{width:auto;white-space:nowrap}.report-actions .btn-primary,.report-actions .btn-secondary{width:100%;justify-content:center}.report-score-copy,.history-main{align-items:flex-start}.history-details{grid-template-columns:1fr}.history-score{justify-content:space-between}.history-actions{justify-content:flex-end}.history-title,.report-title,.practice-title{font-size:2.55rem}.practice-actions .btn-primary,.practice-actions .btn-secondary{width:100%;justify-content:center} }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -387,91 +439,100 @@
         
         <!-- 0. Auth / Landing Page -->
         <section id="auth-view" class="view active">
-            <!-- Landing Header -->
-            <div class="flex items-center justify-between mb-12">
-                <div class="flex items-center gap-3">
-                    <div class="bg-[#06b6d4] p-2.5 rounded-xl shadow-sm">
-                        <i data-lucide="message-square" class="w-5 h-5 text-white"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-extrabold tracking-tighter text-brand-900 uppercase leading-none">PrepWise</h1>
-                        <p class="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">AI Interview Coach</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-4">
-                    <button onclick="window.app.openHowItWorks()" class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-brand-900 transition-colors bg-white border border-slate-100 px-4 py-2 rounded-xl shadow-sm">
-                        <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> How it works
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start mb-12">
-                <!-- Left: hero copy -->
-                <div class="lg:col-span-7 space-y-7">
-                    <div class="page-kicker">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Adaptive interview practice
-                    </div>
-                    <h2 class="auth-hero-title font-black text-brand-900">Practice the interview.<br><span class="text-brand-500">Improve the answer.</span></h2>
-                    <p class="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">An AI interview coach that uses your background, the role, and each answer to ask a more relevant next question.</p>
-                    <div class="flex flex-wrap items-center gap-4">
-                        <button onclick="window.app.continueAsGuest()" class="btn-primary px-7 py-3.5 flex items-center gap-2">Start interview practice <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
-                        <span class="text-xs text-slate-500 flex items-center gap-1.5"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i> Your API key stays on the server</span>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="feature-card flex flex-col items-center text-center gap-3">
-                            <div class="w-10 h-10 bg-[#F5F3FF] text-[#A37BFF] rounded-xl flex items-center justify-center"><i data-lucide="message-square" class="w-5 h-5"></i></div>
-                            <h4 class="text-[9px] font-black text-brand-900 uppercase">Realistic Interviews</h4>
-                            <p class="text-[10px] text-slate-400 font-bold">AI that adapts to you.</p>
+            <div class="auth-shell">
+                <!-- Landing Header -->
+                <div class="auth-topbar">
+                    <div class="auth-brand">
+                        <div class="auth-brand-mark">
+                            <i data-lucide="message-square" class="w-5 h-5"></i>
                         </div>
-                        <div class="feature-card flex flex-col items-center text-center gap-3">
-                            <div class="w-10 h-10 bg-[#EFF6FF] text-[#06b6d4] rounded-xl flex items-center justify-center"><i data-lucide="bar-chart-3" class="w-5 h-5"></i></div>
-                            <h4 class="text-[9px] font-black text-brand-900 uppercase">Personalized Feedback</h4>
-                            <p class="text-[10px] text-slate-400 font-bold">Actionable insights.</p>
-                        </div>
-                        <div class="feature-card flex flex-col items-center text-center gap-3">
-                            <div class="w-10 h-10 bg-[#ECFDF5] text-[#10B981] rounded-xl flex items-center justify-center"><i data-lucide="target" class="w-5 h-5"></i></div>
-                            <h4 class="text-[9px] font-black text-brand-900 uppercase">Track Progress</h4>
-                            <p class="text-[10px] text-slate-400 font-bold">Daily improvements.</p>
-                        </div>
-                    </div>
-
-                    <div class="hidden">
-                        <img src="illustration.png" alt="PrepWise Hero" class="w-full max-w-[420px] h-auto rounded-2xl shadow-soft" onerror="this.style.display='none'; document.getElementById('hero-fallback').classList.remove('hidden')">
-                        <div id="hero-fallback" class="hidden w-full max-w-[420px] aspect-[4/3] bg-brand-50 rounded-2xl flex items-center justify-center border-2 border-dashed border-brand-100">
-                            <div class="text-center p-8"><i data-lucide="image" class="w-10 h-10 text-brand-200 mx-auto mb-3"></i><p class="text-xs font-bold text-brand-300 uppercase tracking-widest">Save as <span class="text-brand-500">illustration.png</span></p></div>
+                        <div>
+                            <h1 class="auth-brand-title">PrepWise</h1>
+                            <p class="auth-brand-subtitle">AI Interview Coach</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right: auth card -->
-                <div class="lg:col-span-5">
-                    <div class="auth-card bg-white p-8 md:p-10 w-full">
-                        <div class="flex justify-center mb-7">
-                            <div class="w-20 h-20 bg-[#F5F7FF] rounded-2xl flex items-center justify-center relative shadow-inner">
-                                <div class="bg-[#A37BFF]/20 p-4 rounded-full relative z-10">
-                                    <div class="bg-brand-900 p-3 rounded-full shadow-md"><i data-lucide="bot" class="w-7 h-7 text-white"></i></div>
+                <div class="auth-layout">
+                    <!-- Left: hero copy -->
+                    <div class="auth-hero">
+                        <div class="auth-kicker">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            Adaptive interview practice
+                        </div>
+                        <h2 class="auth-hero-title">Practice smarter.<br><span>Interview with confidence.</span></h2>
+                        <p class="auth-hero-copy">Prepare with calm, focused practice shaped around your role and answers.</p>
+                        <div class="auth-actions">
+                            <span class="auth-trust-note">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                                Your API key stays on the server
+                            </span>
+                        </div>
+
+                        <div class="auth-proof-row" aria-label="PrepWise practice benefits">
+                            <span class="auth-proof-item">
+                                <span class="auth-proof-icon"><i data-lucide="messages-square"></i></span>
+                                Role-aware questions
+                            </span>
+                            <span class="auth-proof-item">
+                                <span class="auth-proof-icon"><i data-lucide="sparkles"></i></span>
+                                Personalized feedback
+                            </span>
+                            <span class="auth-proof-item">
+                                <span class="auth-proof-icon"><i data-lucide="bookmark-check"></i></span>
+                                Saved progress
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Right: auth card -->
+                    <div class="auth-card-wrap">
+                        <div class="auth-card">
+                            <div class="auth-card-heading">
+                                <div class="auth-card-icon">
+                                    <i data-lucide="bot" class="w-5 h-5"></i>
                                 </div>
-                                <div class="absolute -top-1 -right-1 w-4 h-4 bg-[#63D5C4] rounded-full border-2 border-white shadow-sm"></div>
+                                <div>
+                                    <h3 id="auth-title" class="auth-card-title">Save your progress</h3>
+                                    <p id="auth-subtitle" class="auth-card-subtitle">Sign in to keep your reports and practice history.</p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="text-center mb-7">
-                            <h3 id="auth-title" class="text-2xl font-black text-brand-900 tracking-tighter">Save your progress</h3>
-                            <p id="auth-subtitle" class="text-sm text-slate-500 font-medium mt-1">Sign in to keep your reports and practice history.</p>
-                        </div>
-                        <form id="auth-form" class="space-y-3">
-                            <div class="input-pill flex items-center px-4 py-3.5 rounded-xl"><i data-lucide="mail" class="w-4 h-4 text-slate-300 mr-3"></i><input type="email" id="auth-email" required class="bg-transparent w-full text-brand-900 font-bold placeholder:text-slate-300 outline-none text-sm" placeholder="University email"></div>
-                            <div class="input-pill flex items-center px-4 py-3.5 rounded-xl relative"><i data-lucide="lock" class="w-4 h-4 text-slate-300 mr-3"></i><input type="password" id="auth-password" required class="bg-transparent w-full text-brand-900 font-bold placeholder:text-slate-300 outline-none text-sm" placeholder="Password"><i data-lucide="eye" class="w-4 h-4 text-slate-300 absolute right-4 cursor-pointer"></i></div>
-                            <div class="flex items-center justify-between px-0.5"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked class="w-3.5 h-3.5 rounded border-slate-200"><span class="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Remember me</span></label><a href="#" class="text-[10px] font-bold text-brand-500 hover:underline">Forgot?</a></div>
-                            <button type="submit" id="auth-submit-btn" class="w-full btn-gradient text-white font-black py-3.5 rounded-xl text-sm mt-1 shadow-sm">Sign In <i data-lucide="arrow-right" class="w-4 h-4 ml-1 inline"></i></button>
-                        </form>
-                        <div class="mt-5 space-y-4">
-                            <div class="relative flex justify-center text-[9px] uppercase font-black tracking-widest text-slate-200"><span class="bg-white px-3 relative z-10">or</span><div class="absolute top-1/2 left-0 w-full h-[1px] bg-slate-100"></div></div>
-                            <div class="grid grid-cols-1 gap-3">
-                                <button type="button" onclick="window.app.signInWithGoogle()" class="py-3 rounded-xl border border-slate-100 bg-white text-slate-600 font-bold text-[10px] uppercase hover:bg-slate-50 transition-all flex items-center justify-center gap-2"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-3.5 h-3.5" alt="Google"> Continue with Google</button>
+                            <form id="auth-form" class="space-y-3">
+                                <div class="auth-input">
+                                    <i data-lucide="mail" class="w-4 h-4 text-[#98a2b3]"></i>
+                                    <input type="email" id="auth-email" required placeholder="University email">
+                                </div>
+                                <div class="auth-input">
+                                    <i data-lucide="lock" class="w-4 h-4 text-[#98a2b3]"></i>
+                                    <input type="password" id="auth-password" required placeholder="Password">
+                                    <i data-lucide="eye" class="w-4 h-4 text-[#98a2b3]"></i>
+                                </div>
+                                <div class="auth-row">
+                                    <label class="auth-check">
+                                        <input type="checkbox" checked class="w-3.5 h-3.5 rounded border-slate-200">
+                                        <span>Remember me</span>
+                                    </label>
+                                    <a href="#" class="auth-forgot">Forgot?</a>
+                                </div>
+                                <button type="submit" id="auth-submit-btn" class="btn-gradient auth-submit">
+                                    Sign In
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </button>
+                            </form>
+                            <div>
+                                <div class="auth-divider"><span>or</span></div>
+                                <button type="button" onclick="window.app.signInWithGoogle()" class="auth-google">
+                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" alt="Google">
+                                    Continue with Google
+                                </button>
+                                <p class="auth-switch">
+                                    New here?
+                                    <button type="button" onclick="window.app.toggleAuthMode()" id="toggle-auth-mode">Create an account</button>
+                                </p>
+                                <div class="text-center">
+                                    <button type="button" onclick="window.app.continueAsGuest()" class="auth-guest">Continue as Guest</button>
+                                </div>
                             </div>
-                            <p class="text-center text-[10px] font-bold text-slate-400">New here? <button onclick="window.app.toggleAuthMode()" id="toggle-auth-mode" class="text-brand-500 hover:underline font-black">Create an account</button></p>
-                            <div class="text-center"><button onclick="window.app.continueAsGuest()" class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] hover:text-brand-500 transition-colors">Continue as Guest</button></div>
                         </div>
                     </div>
                 </div>
